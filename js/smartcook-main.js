@@ -246,20 +246,29 @@ const fallbackTranslations = {
         'Install the matching packages in the operating system or container that runs Nextcloud.': 'Installa i pacchetti corrispondenti nel sistema operativo o nel container che esegue Nextcloud.',
         'After installing': 'Dopo l’installazione',
         'Set the extractor to Local Tesseract / pdftotext, use ita+eng when both languages are installed, then save the settings. Packages installed directly in a container can be lost when it is recreated; use a custom image for a permanent setup.': 'Imposta l’estrattore su Tesseract / pdftotext locale, usa ita+eng quando sono installate entrambe le lingue, quindi salva le impostazioni. I pacchetti installati direttamente nel container possono essere persi quando viene ricreato: usa un’immagine personalizzata per una configurazione permanente.',
+        // Ingredient unit labels (canonical codes used by the backend).
+        tsp: 'cucchiaino',
+        tbsp: 'cucchiaio',
+        cup: 'tazza',
+        pc: 'pz',
+        clove: 'spicchio',
+        pinch: 'pizzico',
+        to_taste: 'q.b.',
     },
 };
 const tr = (text) => {
     const language = String(document.documentElement.lang || '').toLowerCase().split('-')[0];
     return fallbackTranslations[language]?.[text] || (smartWindow.t ? smartWindow.t(appId, text) : text);
 };
+// Canonical unit codes stored by the backend (see TextNormalizer::UNIT_ALIASES) that get a
+// language-specific label from the translation catalog; every other unit (g, kg, ml, ...) is shown as stored.
+const unitLabels = () => ({
+    tsp: tr('tsp'), tbsp: tr('tbsp'), cup: tr('cup'), pc: tr('pc'), clove: tr('clove'),
+    pinch: tr('pinch'), to_taste: tr('to_taste'),
+});
 const displayUnit = (unit) => {
-    const language = String(document.documentElement.lang || '').toLowerCase().split('-')[0];
-    if (language !== 'it')
-        return String(unit ?? '');
-    return ({
-        tsp: 'cucchiaino', tbsp: 'cucchiaio', cup: 'tazza', pc: 'pz', clove: 'spicchio',
-        pinch: 'pizzico', to_taste: 'q.b.',
-    })[String(unit ?? '').toLowerCase()] || String(unit ?? '');
+    const text = String(unit ?? '');
+    return unitLabels()[text.toLowerCase()] || text;
 };
 const mealLabel = (slot) => tr({ breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' }[slot] || 'Meal');
 const esc = (value) => String(value ?? '')
