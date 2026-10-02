@@ -11,7 +11,7 @@ Import recipes from ordinary webpages, YouTube videos, public Facebook posts and
 
 SmartCook checks Schema.org recipe data first and then uses deterministic local parsing. AI refinement and OCR are optional: choose and configure only the providers you trust. Your source is never saved until you review and confirm the extracted recipe.
     ]]></description>
-    <version>1.0.190</version>
+    <version>1.0.192</version>
     <licence>MIT</licence>
     <author>SmartCook contributors</author>
     <website>https://github.com/gabryk91/smartcook</website>

@@ -14,6 +14,15 @@ let busyCount = 0;
 let messageTimer = 0;
 const fallbackTranslations = {
     it: {
+        'Ingredients': 'Ingredienti',
+        'Category': 'Categoria',
+        'Category...': 'Categoria...',
+        'Edit': 'Modifica',
+        'Edit ingredient': 'Modifica ingrediente',
+        'Ingredient updated': 'Ingrediente aggiornato',
+        'Save': 'Salva',
+        'Substitutes (comma separated)': 'Sostituti (separati da virgola)',
+        'e.g. Milk, Water': 'es. Latte, Acqua',
         // Keep bundle-only UI text translated when the Nextcloud catalog has not been regenerated yet.
         minutes: 'minuti',
         hours: 'ore',
@@ -1845,6 +1854,7 @@ async function renderAdministration(view) {
     const labels = {
         tags: tr('Tags'), categories: tr('Categories'), tools: tr('Tools'), cuisine: tr('Cuisine'),
         mealType: tr('Meal type'), cookingMethod: tr('Cooking method'), season: tr('Season'),
+        ingredients: tr('Ingredients')
     };
     let taxonomy = {};
     let recipes = [];
@@ -2019,7 +2029,7 @@ async function renderAdministration(view) {
         const selectedLabel = `${selectedCount} ${tr('recipes selected')}`;
         const activeLabel = labels[activeKind];
         const activeItems = [...(taxonomy[activeKind] || [])].sort((left, right) => String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' }));
-        const managementPanel = `<section class="panel taxonomy-admin-card"><div class="section-heading"><div><p class="eyebrow">${esc(activeLabel)}</p><h2>${esc(tr('Manage list'))}</h2></div></div><form data-taxonomy-add="${attr(activeKind)}" class="taxonomy-admin-add"><input name="name" required maxlength="255" placeholder="${attr(tr('New value...'))}"><button class="primary" type="submit">${esc(tr('Add'))}</button></form><div class="taxonomy-admin-items">${activeItems.map(item => `<article><div><strong>${esc(item.name)}</strong><small>${asNumber(item.usageCount)} ${esc(tr('recipes'))}</small></div><div class="taxonomy-admin-actions"><button class="secondary" data-taxonomy-select-recipes="${attr(activeKind)}:${item.id}" type="button">${esc(tr('Filter recipes with this value'))}</button><button class="secondary" data-taxonomy-assign="${attr(activeKind)}:${item.id}" type="button"${selectedCount ? '' : ' disabled'}>${esc(tr('Assign to selected'))}</button><button class="ghost" data-taxonomy-remove="${attr(activeKind)}:${item.id}" type="button"${selectedCount ? '' : ' disabled'}>${esc(tr('Remove from selected'))}</button><button class="danger ghost" data-taxonomy-delete="${attr(activeKind)}:${item.id}" type="button" aria-label="${attr(tr('Delete'))}">${fa('xmark')}</button></div></article>`).join('') || `<p class="section-help">${esc(tr('No values yet'))}</p>`}</div></section>`;
+        const managementPanel = `<section class="panel taxonomy-admin-card"><div class="section-heading"><div><p class="eyebrow">${esc(activeLabel)}</p><h2>${esc(tr('Manage list'))}</h2></div></div><form data-taxonomy-add="${attr(activeKind)}" class="taxonomy-admin-add"><input name="name" required maxlength="255" placeholder="${attr(tr('New value...'))}"><button class="primary" type="submit">${esc(tr('Add'))}</button></form><div class="taxonomy-admin-items">${activeItems.map(item => `<article><div><strong>${esc(item.name)}</strong><small>${activeKind === 'ingredients' ? esc(item.category || tr('Uncategorized')) : `${asNumber(item.usageCount)} ${esc(tr('recipes'))}`}</small></div><div class="taxonomy-admin-actions">${activeKind === 'ingredients' ? `<button class="secondary" data-ingredient-edit="${item.id}" type="button">${esc(tr('Edit'))}</button>` : ''}<button class="secondary" data-taxonomy-select-recipes="${attr(activeKind)}:${item.id}" type="button">${esc(tr('Filter recipes with this value'))}</button><button class="secondary" data-taxonomy-assign="${attr(activeKind)}:${item.id}" type="button"${selectedCount ? '' : ' disabled'}>${esc(tr('Assign to selected'))}</button><button class="ghost" data-taxonomy-remove="${attr(activeKind)}:${item.id}" type="button"${selectedCount ? '' : ' disabled'}>${esc(tr('Remove from selected'))}</button><button class="danger ghost" data-taxonomy-delete="${attr(activeKind)}:${item.id}" type="button" aria-label="${attr(tr('Delete'))}">${fa('xmark')}</button></div></article>`).join('') || `<p class="section-help">${esc(tr('No values yet'))}</p>`}</div></section>`;
         view.innerHTML = `${recipeSelector()}${administrationTabs()}<section class="panel taxonomy-recipe-selector legacy-taxonomy-recipe-selector"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Bulk editing'))}</p><h2>${esc(tr('Select recipes'))}</h2></div><strong data-selected-recipe-count>${esc(selectedLabel)}</strong></div><div class="toolbar taxonomy-admin-toolbar"><label class="search-field"><span>${fa('magnifying-glass')}</span><input data-admin-recipe-search value="${attr(recipeFilter)}" placeholder="${attr(tr('Filter recipes...'))}"></label><div class="taxonomy-filter">${taxonomyPicker('categories', taxonomy.categories || [], selectedCategories)}</div><div class="taxonomy-filter">${taxonomyPicker('tags', taxonomy.tags || [], selectedTags)}</div></div>${selectedTaxonomyValue ? `<p class="section-help">${esc(tr('Filtered by'))}: <strong>${esc(labels[selectedTaxonomyValue.kind])}: ${esc(selectedTaxonomyValue.name)}</strong> <button class="ghost" data-clear-taxonomy-filter type="button">${esc(tr('Clear filter'))}</button></p>` : ''}<label class="check-inline taxonomy-select-all"><input data-admin-select-all type="checkbox"${visibleRecipes.length > 0 && visibleRecipes.every(recipe => selectedRecipeIds.has(recipe.id)) ? ' checked' : ''}> ${esc(tr('Select filtered recipes'))}</label><div class="taxonomy-recipe-list">${visibleRecipes.map(recipe => `<label><input data-admin-recipe-id="${recipe.id}" type="checkbox"${selectedRecipeIds.has(recipe.id) ? ' checked' : ''}><span><strong>${esc(recipe.title)}</strong>${recipe.cuisine ? `<small>${esc(recipe.cuisine)}</small>` : ''}</span></label>`).join('') || `<p class="section-help">${esc(tr('No recipes found'))}</p>`}</div></section><nav class="tabs taxonomy-admin-tabs" aria-label="${attr(tr('Manage list'))}" role="tablist">${Object.entries(labels).map(([kind, label]) => `<button class="${kind === activeKind ? 'active' : ''}" data-admin-tab="${attr(kind)}" type="button" role="tab" aria-selected="${kind === activeKind}">${esc(label)}</button>`).join('')}</nav>${managementPanel}`;
         bindAdministrationTabs();
         view.querySelector('[data-admin-recipe-search]')?.addEventListener('input', event => {
@@ -2074,6 +2084,49 @@ async function renderAdministration(view) {
             const response = await working(() => request(`/taxonomy/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/${action}`, { method: 'POST', json: { recipeIds: selectedIds() } }));
             showNotice(`${asNumber(response.changed)} ${tr('recipes updated')}`);
             await load();
+        }));
+        view.querySelectorAll('[data-ingredient-edit]' ).forEach(button => button.addEventListener('click', () => {
+            const id = button.dataset.ingredientEdit;
+            const item = (taxonomy.ingredients || []).find(cand => String(cand.id) === id);
+            if (!item) return;
+
+            const allCategories = Array.from(new Set((taxonomy.ingredients || []).map(cand => cand.category).filter(Boolean))).sort();
+            const datalistId = `ingredient-categories-${item.id}`;
+
+            const modal = document.createElement('div');
+            modal.className = 'blocking-modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.innerHTML = `<div class="blocking-modal-card" style="min-width: 400px; padding: 24px;">
+                <div class="section-heading"><h2>${esc(tr('Edit ingredient'))}: ${esc(item.name)}</h2></div>
+                <form data-ingredient-edit-form="${item.id}" style="display: flex; flex-direction: column; gap: 16px;">
+                    <label>${esc(tr('Category'))}
+                        <input name="category" list="${attr(datalistId)}" value="${attr(item.category || '')}" placeholder="${attr(tr('Category...'))}">
+                        <datalist id="${attr(datalistId)}">${allCategories.map(cat => `<option value="${attr(cat)}"></option>`).join('')}</datalist>
+                    </label>
+                    <label>${esc(tr('Substitutes (comma separated)'))}
+                        <input name="substitutes" value="${attr((item.substitutes || []).join(' , '))}" placeholder="${attr(tr('e.g. Milk, Water'))}">
+                    </label>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button class="ghost" type="button" data-close>${esc(tr('Cancel'))}</button>
+                        <button class="primary" type="submit">${esc(tr('Save'))}</button>
+                    </div>
+                </form>
+            </div>`;
+            const close = () => modal.remove();
+            modal.querySelector('[data-close]' ).addEventListener('click', close);
+            modal.querySelector('form' ).addEventListener('submit', async event => {
+                event.preventDefault();
+                const form = event.target;
+                const category = form.category.value.trim();
+                const substitutes = form.substitutes.value.split(',').map(s => s.trim()).filter(Boolean);
+                await working(() => request(`/taxonomy/ingredients/${id}`, { method: 'PUT', json: { category, substitutes } }));
+                showNotice(tr('Ingredient updated'));
+                close();
+                await load();
+            });
+            document.body.append(modal);
+            modal.querySelector('input' )?.focus();
         }));
         bindSelectionAction('[data-taxonomy-assign]', 'assign', tr('Assign this value to the selected recipes?'));
         bindSelectionAction('[data-taxonomy-remove]', 'remove', tr('Remove this value from the selected recipes?'));

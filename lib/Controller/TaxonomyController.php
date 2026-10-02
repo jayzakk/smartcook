@@ -44,6 +44,18 @@ final class TaxonomyController extends BaseController {
     }
 
     #[NoAdminRequired]
+    #[FrontpageRoute(verb: 'PUT', url: '/taxonomy/ingredients/{id}')]
+    public function updateIngredient(int $id): JSONResponse {
+        $category = $this->request->getParam('category');
+        $substitutes = $this->request->getParam('substitutes');
+        return $this->respond(fn (): array => ['item' => $this->taxonomy->updateIngredient(
+            $this->userContext->userId(), $id,
+            $category,
+            is_array($substitutes) ? $substitutes : []
+        )]);
+    }
+
+    #[NoAdminRequired]
     #[FrontpageRoute(verb: 'POST', url: '/taxonomy/{kind}/{id}/assign')]
     public function assign(string $kind, int $id): JSONResponse {
         return $this->respond(fn (): array => ['changed' => $this->taxonomy->applyManagedToRecipes(
