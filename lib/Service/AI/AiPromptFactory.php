@@ -4,7 +4,17 @@ declare(strict_types=1);
 
 namespace OCA\SmartCook\Service\AI;
 
+use OCP\IL10N;
+
 final class AiPromptFactory {
+    public function __construct(private ?IL10N $l10n = null) {
+    }
+
+    /** @param list<string|int> $parameters */
+    private function t(string $text, array $parameters = []): string {
+        return $this->l10n?->t($text, $parameters) ?? vsprintf($text, $parameters);
+    }
+
     /** @param list<array<string, mixed>> $recipes */
     public function assistant(string $question, array $recipes, string $language): string {
         $catalog = json_encode($recipes, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -64,7 +74,7 @@ JSON;
             $choices[$field] = $names;
         }
         $catalog = json_encode($choices, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        return "For tags, categories, cuisine, mealType and cookingMethod, select ONLY exact labels from this existing SmartCook vocabulary: {$catalog}. Never invent, translate, rephrase, or create a new classification. Keep the organization compact: prefer the broadest accurate existing label, use the fewest labels that still help users find the recipe, and when labels are near-duplicates or aliases choose one existing label consistently. Do not duplicate the same meaning across tags, categories, cuisine, mealType or cookingMethod: for example, if 'Primo piatto' is already the category or meal type, do not also use it as a tag. Do not add a more specific label when an assigned broader label already describes the recipe. If no listed value is appropriate, return null for single-value fields and [] for tags/categories. ";
+        return "For tags, categories, cuisine, mealType and cookingMethod, select ONLY exact labels from this existing SmartCook vocabulary: {$catalog}. Never invent, translate, rephrase, or create a new classification. Keep the organization compact: prefer the broadest accurate existing label, use the fewest labels that still help users find the recipe, and when labels are near-duplicates or aliases choose one existing label consistently. Do not duplicate the same meaning across tags, categories, cuisine, mealType or cookingMethod: for example, if 'Main course' is already the category or meal type, do not also use it as a tag. Do not add a more specific label when an assigned broader label already describes the recipe. If no listed value is appropriate, return null for single-value fields and [] for tags/categories. ";
     }
 
     /** @param list<array<string, mixed>> $recipes @param array<string, mixed> $preferences */
@@ -72,7 +82,13 @@ JSON;
         $schema = '{"meals":[{"date":"YYYY-MM-DD","slot":"breakfast|lunch|dinner|snack","recipeId":1,"servings":2,"notes":"string|null"}]}';
         $catalog = json_encode($recipes, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $custom = trim((string)($preferences['prompt'] ?? ''));
-        $instruction = $custom !== '' ? $custom : 'Organizza una settimana varia e realistica usando esclusivamente le ricette disponibili.';
-        return "{$instruction}\nCrea un piano pasti dal {$from} al {$to}. Usa esclusivamente recipeId presenti nel catalogo. Rispetta preferenze alimentari, allergie, tempo massimo e porzioni indicati. Inserisci colazione, pranzo, cena o snack quando appropriato; non aggiungere pasti se non esiste una ricetta adatta. Evita ripetizioni ravvicinate quando possibile. Restituisci solo JSON valido senza Markdown con questa forma: {$schema}\n\nPREFERENZE:\n" . (string)($preferences['dietary'] ?? '') . "\nTEMPO MASSIMO DI CUCINA (MINUTI): " . (int)($preferences['cookingTime'] ?? 60) . "\nPORZIONI: " . (int)($preferences['servings'] ?? 2) . "\nISTRUZIONI SETTIMANALI:\n" . (string)($preferences['instruction'] ?? '') . "\n\nCATALOGO RICETTE:\n{$catalog}";
+        // The instructions are sent in the user's language; the JSON shape and its keys stay English.
+        $instruction = $custom !== '' ? $custom : $this->t('Plan a varied, realistic week using only the available recipes.');
+        return $instruction . "\n" . $this->t('Create a meal plan from %1$s to %2$s. Use only recipeId values that exist in the catalog. Respect the dietary preferences, allergies, maximum time and servings given. Add breakfast, lunch, dinner or snack where appropriate; do not add meals if no suitable recipe exists. Avoid close repetitions where possible. Return only valid JSON without Markdown in this shape: %3$s', [$from, $to, $schema])
+            . "\n\n" . $this->t('PREFERENCES:') . "\n" . (string)($preferences['dietary'] ?? '')
+            . "\n" . $this->t('MAXIMUM COOKING TIME (MINUTES):') . ' ' . (int)($preferences['cookingTime'] ?? 60)
+            . "\n" . $this->t('SERVINGS:') . ' ' . (int)($preferences['servings'] ?? 2)
+            . "\n" . $this->t('WEEKLY INSTRUCTIONS:') . "\n" . (string)($preferences['instruction'] ?? '')
+            . "\n\n" . $this->t('RECIPE CATALOG:') . "\n" . $catalog;
     }
 }

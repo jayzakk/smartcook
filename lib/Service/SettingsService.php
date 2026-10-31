@@ -9,6 +9,9 @@ use OCP\IConfig;
 use OCP\Security\ICrypto;
 
 final class SettingsService {
+    /** Former built-in default of aiPlannerPrompt; it was stored verbatim whenever settings were saved. */
+    private const LEGACY_PLANNER_PROMPT = 'Organizza una settimana varia e realistica usando esclusivamente le ricette disponibili.';
+
     private const DEFAULTS = [
         'language' => 'auto',
         'measurementSystem' => 'metric',
@@ -18,7 +21,7 @@ final class SettingsService {
         'aiModel' => '',
         'aiTemperature' => '0.1',
         'aiTimeout' => '90',
-        'aiPlannerPrompt' => 'Organizza una settimana varia e realistica usando esclusivamente le ricette disponibili.',
+        'aiPlannerPrompt' => '',
         'plannerPreferences' => '',
         'plannerCookingTime' => '60',
         'plannerServings' => '2',
@@ -40,6 +43,10 @@ final class SettingsService {
         $result = [];
         foreach (self::DEFAULTS as $key => $default) {
             $result[$key] = $this->config->getUserValue($userId, Application::APP_ID, $key, $default);
+        }
+        // An empty prompt means "use the built-in default in the user's language" (see AiPromptFactory).
+        if (trim((string)$result['aiPlannerPrompt']) === self::LEGACY_PLANNER_PROMPT) {
+            $result['aiPlannerPrompt'] = '';
         }
         $result['aiTemperature'] = (float)$result['aiTemperature'];
         $result['aiTimeout'] = (int)$result['aiTimeout'];
