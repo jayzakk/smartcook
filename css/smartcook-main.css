@@ -1,4 +1,5 @@
-:root {
+:root,
+body {
 	--smartcook-accent: var(--color-primary-element, #00679e);
 	--smartcook-accent-hover: var(--color-primary-element-hover, #005b8b);
 	--smartcook-surface: var(--color-main-background, #fff);
@@ -328,7 +329,7 @@ button:disabled,
 
 .notice.error {
 	border-color: var(--color-error, #c00);
-	background: var(--color-error-rgb, #fff0f0);
+	background: color-mix(in srgb, var(--color-error, #c00) 12%, var(--smartcook-surface));
 }
 
 .notice.success {
@@ -1136,7 +1137,7 @@ select:focus {
 	height: 30px;
 	border: 0;
 	border-radius: 999px;
-	background: rgb(255 255 255 / 92%);
+	background: color-mix(in srgb, var(--smartcook-surface) 92%, transparent);
 	color: var(--smartcook-muted);
 	font-size: 15px;
 	cursor: pointer;
@@ -1423,7 +1424,7 @@ select:focus {
 }
 
 .metric-icon-favorites {
-	background: #fdeee9;
+	background: color-mix(in srgb, #e35d3f 16%, var(--smartcook-surface));
 	color: #e35d3f;
 }
 
@@ -2382,7 +2383,7 @@ select:focus {
 
 .danger-zone {
 	border: 2px solid #e00000;
-	background: #fff4f4;
+	background: color-mix(in srgb, #e00000 6%, var(--smartcook-surface));
 }
 
 .danger-zone h2 {
