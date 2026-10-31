@@ -42,7 +42,6 @@ const fallbackTranslations = {
         'Recipe added to shopping list': 'Ricetta aggiunta alla lista della spesa',
         'Generate one from your recipes': 'Generane una dalle tue ricette',
         'No items yet': 'Nessun articolo',
-        Items: 'Elementi',
         of: 'di',
         completed: 'completati',
         Completed: 'Completata',
@@ -110,13 +109,11 @@ const fallbackTranslations = {
         'Manage list': 'Gestisci elenco',
         'Add values to your lists, then assign or remove each value from all your recipes. Deleting a value also removes it from every recipe.': 'Aggiungi valori agli elenchi, quindi assegnali o rimuovili da tutte le ricette. Eliminando un valore viene rimosso da ogni ricetta.',
         'New value...': 'Nuovo valore...',
-        recipes: 'ricette',
         'Assign to all': 'Assegna a tutte',
         'Remove from all': 'Rimuovi da tutte',
         'No values yet': 'Nessun valore',
         'Bulk editing': 'Modifica massiva',
         'Select recipes': 'Seleziona ricette',
-        'recipes selected': 'ricette selezionate',
         'Clear selected recipes': 'Deseleziona ricette',
         'Filter recipes...': 'Filtra ricette...',
         'Select filtered recipes': 'Seleziona ricette filtrate',
@@ -126,7 +123,6 @@ const fallbackTranslations = {
         'Remove from selected': 'Rimuovi dalle selezionate',
         'Delete selected recipes': 'Elimina ricette selezionate',
         'Delete the selected recipes? This cannot be undone.': 'Eliminare le ricette selezionate? L’operazione non può essere annullata.',
-        'recipes deleted': 'ricette eliminate',
         'Filter recipes with this value': 'Filtra ricette con questo valore',
         'Filtered by': 'Filtrate per',
         'Clear filter': 'Rimuovi filtro',
@@ -161,7 +157,6 @@ const fallbackTranslations = {
         'No changes proposed': 'Nessuna modifica proposta',
         'Find a cover image': 'Trova un’immagine di copertina',
         'Apply the approved changes to the selected recipes?': 'Applicare le modifiche approvate alle ricette selezionate?',
-        'recipes updated': 'ricette aggiornate',
         'Assign this value to the selected recipes?': 'Assegnare questo valore alle ricette selezionate?',
         'Remove this value from the selected recipes?': 'Rimuovere questo valore dalle ricette selezionate?',
         'Value added': 'Valore aggiunto',
@@ -180,7 +175,6 @@ const fallbackTranslations = {
         'Importing recipe': 'Importazione ricetta',
         of: 'di',
         'Please wait while the source is analyzed.': 'Attendi mentre la fonte viene analizzata.',
-        'recipes extracted. Review them before saving.': 'ricette estratte. Controllale prima di salvarle.',
         'Save all recipes': 'Salva tutte le ricette',
         'Saving recipe': 'Salvataggio ricetta',
 		'Choose a recipe to review': 'Scegli una ricetta da controllare',
@@ -188,7 +182,6 @@ const fallbackTranslations = {
 		'Ingredients (one per line)': 'Ingredienti (uno per riga)',
 		'Quantity | unit | ingredient | notes': 'Quantità | unità | ingrediente | note',
 		'Steps (one per line)': 'Passaggi (uno per riga)',
-		Steps: 'Passaggi',
 		'Imported classification': 'Classificazione importata',
 		'Suggested cover photo': 'Foto di copertina suggerita',
 		'AI suggestion': 'Suggerimento AI',
@@ -269,6 +262,10 @@ const tr = (text) => {
     const language = String(document.documentElement.lang || '').toLowerCase().split('-')[0];
     return fallbackTranslations[language]?.[text] || (smartWindow.t ? smartWindow.t(appId, text) : text);
 };
+// Plural-aware translation: the catalog keys are '_<singular>_::_<plural>_' (see l10n/*.json), '%n' is the count.
+const trn = (singular, plural, count) => smartWindow.n
+    ? smartWindow.n(appId, singular, plural, count)
+    : (count === 1 ? singular : plural).replace('%n', String(count));
 // Canonical unit codes stored by the backend (see TextNormalizer::UNIT_ALIASES) that get a
 // language-specific label from the translation catalog; every other unit (g, kg, ml, ...) is shown as stored.
 const unitLabels = () => ({
@@ -619,7 +616,7 @@ async function renderRecipes(view, routeParams = new URLSearchParams()) {
             const totalTime = asNumber(recipe.totalTime) || asNumber(recipe.prepTime) + asNumber(recipe.restTime) + asNumber(recipe.cookTime);
             const categories = (recipe.categories || []).map(category => String(category?.name || category || '').trim()).filter(Boolean);
             return `<article class="recipe-card"><a class="recipe-image" href="#/recipes/${recipe.id}">${image ? `<img src="${attr(image)}" alt="">` : `<div class="image-placeholder"><span>${esc(recipe.title.slice(0, 1).toUpperCase())}</span></div>`}<span class="recipe-image-overlay" aria-hidden="true"></span>${categories.length ? `<span class="recipe-badge">${esc(categories[0])}</span>` : ''}${totalTime > 0 ? `<span class="time-pill">${fa('clock')} ${totalTime} min</span>` : ''}</a><button class="recipe-fav" data-favorite-id="${recipe.id}" data-favorite="${recipe.favorite ? '1' : '0'}" aria-label="${attr(tr('Toggle favorite'))}">${fa(recipe.favorite ? 'star' : 'star', recipe.favorite ? '' : 'fa-regular')}</button>
-			<div class="recipe-card-body"><a href="#/recipes/${recipe.id}"><h2>${esc(recipe.title)}</h2></a><p>${esc(recipe.description || tr('No description'))}</p><div class="card-meta">${asNumber(recipe.servings) > 0 ? `<span class="card-meta-item">${fa('utensils')} ${asNumber(recipe.servings)} ${esc(tr('servings'))}</span>` : ''}${difficultyIndicator(recipe.difficulty)}</div></div></article>`;
+			<div class="recipe-card-body"><a href="#/recipes/${recipe.id}"><h2>${esc(recipe.title)}</h2></a><p>${esc(recipe.description || tr('No description'))}</p><div class="card-meta">${asNumber(recipe.servings) > 0 ? `<span class="card-meta-item">${fa('utensils')} ${esc(trn('%n serving', '%n servings', asNumber(recipe.servings)))}</span>` : ''}${difficultyIndicator(recipe.difficulty)}</div></div></article>`;
         }).join('')}</div>` : `<section class="panel empty-state"><h2>${esc(tr('No recipes found'))}</h2><p>${esc(tr('Change the filters, create a recipe, or import one from a URL.'))}</p><div><a class="primary" href="#/import">${esc(tr('Import recipe'))}</a> <a class="secondary" href="#/new">${esc(tr('Create manually'))}</a></div></section>`;
         results.querySelectorAll('[data-favorite-id]').forEach(button => button.addEventListener('click', async () => {
             const id = asNumber(button.dataset.favoriteId);
@@ -883,7 +880,7 @@ function chooseShoppingList(recipe, lists, initialServings = recipe.servings) {
             if (event.key === 'Escape')
                 close();
         };
-        const listChoices = (lists || []).map(list => `<label class="check-inline shopping-list-choice"><input data-shopping-list-choice type="radio" name="smartcook-shopping-list" value="${asNumber(list.id)}"><span><strong>${esc(list.name)}</strong><small>${asNumber(list.itemCount)} ${esc(tr('Items'))}</small></span></label>`).join('');
+        const listChoices = (lists || []).map(list => `<label class="check-inline shopping-list-choice"><input data-shopping-list-choice type="radio" name="smartcook-shopping-list" value="${asNumber(list.id)}"><span><strong>${esc(list.name)}</strong><small>${esc(trn('%n item', '%n items', asNumber(list.itemCount)))}</small></span></label>`).join('');
         modal.innerHTML = `<div class="cover-picker-card shopping-list-picker"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Shopping list'))}</p><h2 id="smartcook-shopping-list-title">${esc(tr('Select or create a list'))}</h2><p class="section-help">${esc(tr('Choose where to add this recipe or create a new list.'))}</p></div><button class="icon-button" data-close-shopping-list-picker type="button" aria-label="${attr(tr('Close'))}">${fa('xmark')}</button></div><div class="shopping-list-choices">${listChoices}<label class="check-inline shopping-list-choice"><input data-shopping-list-choice type="radio" name="smartcook-shopping-list" value="new" checked><span><strong>${esc(tr('Create a new list'))}</strong><small>${esc(recipe.title)}</small></span></label></div><div class="form-grid"><label class="shopping-list-name">${esc(tr('List name'))}<input data-new-shopping-list-name value="${attr(`${tr('Shopping list')}: ${recipe.title}`)}"></label><label>${esc(tr('Servings'))}<input data-shopping-servings type="number" min="1" step="1" value="${asNumber(initialServings, 1)}"></label></div><div class="button-row"><button class="primary" data-confirm-shopping-list type="button">${esc(tr('Add to selected list'))}</button><button class="ghost" data-close-shopping-list-picker type="button">${esc(tr('Cancel'))}</button></div></div>`;
         modal.querySelectorAll('[data-close-shopping-list-picker]').forEach(button => button.addEventListener('click', () => close()));
         const updateNameField = () => {
@@ -961,7 +958,7 @@ async function renderRecipe(view, id) {
         if (!approved || (!Object.keys(approved.fields).length && !approved.addCover))
             return;
         const result = await working(() => request('/recipes/refinement/apply', { method: 'POST', json: { proposals: [approved] } }));
-        showNotice(`${asNumber(result.changed)} ${tr('recipes updated')}`);
+        showNotice(`${trn('%n recipe updated', '%n recipes updated', asNumber(result.changed))}`);
         await renderRecipe(view, id);
     });
     view.querySelector('[data-share-recipe]')?.addEventListener('click', () => { void shareRecipe(recipe); });
@@ -1521,7 +1518,7 @@ async function renderImport(view) {
                     setImportBusy(false);
                 }
             }
-            showNotice(previews.length > 1 ? `${previews.length} ${tr('recipes extracted. Review them before saving.')}` : tr('Recipe data extracted. Review it before saving.'));
+            showNotice(previews.length > 1 ? `${trn('%n recipe extracted. Review it before saving.', '%n recipes extracted. Review them before saving.', previews.length)}` : tr('Recipe data extracted. Review it before saving.'));
             const holder = view.querySelector('[data-import-preview]');
             holder.innerHTML = importPreviewsHtml(previews, savedPreviews, commonImportTag, taxonomy);
             bindImportSave(holder);
@@ -1649,7 +1646,7 @@ function importPreviewsHtml(previews, savedPreviews, commonImportTag = '', taxon
         return `<div class="empty-preview"><div>${fa('file-lines')}</div><h2>${esc(tr('Preview appears here'))}</h2><p>${esc(tr('The source is never saved as a recipe until you review and confirm the extracted fields.'))}</p></div>`;
     const pending = previews.length - savedPreviews.size;
     const lists = `<datalist id="smartcook-import-tags">${importTaxonomyOptions(taxonomy.tags)}</datalist><datalist id="smartcook-import-categories">${importTaxonomyOptions(taxonomy.categories)}</datalist><datalist id="smartcook-import-cuisine">${importTaxonomyOptions(taxonomy.cuisine)}</datalist><datalist id="smartcook-import-meal-type">${importTaxonomyOptions(taxonomy.mealType)}</datalist><datalist id="smartcook-import-cooking-method">${importTaxonomyOptions(taxonomy.cookingMethod)}</datalist>`;
-    return `${lists}<div class="section-heading"><div><p class="eyebrow">${previews.length} ${esc(tr('recipes extracted. Review them before saving.'))}</p><h2>${esc(tr('Import previews'))}</h2></div><button class="primary" data-save-all-import type="button">${esc(pending ? tr('Save all recipes') : tr('View recipes'))}</button></div>${previews.length > 1 ? `<nav class="import-preview-index" aria-label="${attr(tr('Choose a recipe to review'))}"><strong>${esc(tr('Choose a recipe to review'))}</strong><div>${previews.map((item, index) => `<button class="secondary" data-open-import-preview="${index}" type="button">${index + 1}. ${esc(item.recipe.title || tr('Import preview'))}</button>`).join('')}</div></nav><label class="import-common-tag">${esc(tr('Apply this tag to every imported recipe'))}<input data-import-common-tag value="${attr(commonImportTag)}" list="smartcook-import-tags" autocomplete="new-password"></label>` : ''}${previews.map((item, index) => importPreviewHtml(item, savedPreviews.has(index), index)).join('')}`;
+    return `${lists}<div class="section-heading"><div><p class="eyebrow">${esc(trn('%n recipe extracted. Review it before saving.', '%n recipes extracted. Review them before saving.', previews.length))}</p><h2>${esc(tr('Import previews'))}</h2></div><button class="primary" data-save-all-import type="button">${esc(pending ? tr('Save all recipes') : tr('View recipes'))}</button></div>${previews.length > 1 ? `<nav class="import-preview-index" aria-label="${attr(tr('Choose a recipe to review'))}"><strong>${esc(tr('Choose a recipe to review'))}</strong><div>${previews.map((item, index) => `<button class="secondary" data-open-import-preview="${index}" type="button">${index + 1}. ${esc(item.recipe.title || tr('Import preview'))}</button>`).join('')}</div></nav><label class="import-common-tag">${esc(tr('Apply this tag to every imported recipe'))}<input data-import-common-tag value="${attr(commonImportTag)}" list="smartcook-import-tags" autocomplete="new-password"></label>` : ''}${previews.map((item, index) => importPreviewHtml(item, savedPreviews.has(index), index)).join('')}`;
 }
 function importPreviewHtml(preview, saved = false, index = 0) {
     const recipe = preview.recipe;
@@ -1667,12 +1664,12 @@ function importPreviewHtml(preview, saved = false, index = 0) {
 	].filter(([, value]) => String(value || '').trim() !== '');
     const ingredientText = (recipe.ingredients || []).map(item => [item.quantity ?? '', item.unit || '', item.name || '', item.notes || ''].join(' | ')).join('\n');
 	const stepText = (recipe.steps || []).map(step => step.text || '').join('\n');
-    return `<details class="import-preview-card" data-import-preview-card ${index === 0 ? 'open' : ''}><summary><div><p class="eyebrow">${index + 1}. ${esc(preview.strategy)}</p><h3>${esc(recipe.title || tr('Import preview'))}</h3></div>${saved ? `<span class="status-pill enabled">${esc(tr('Saved'))}</span>` : `<span class="import-preview-summary">${recipe.ingredients.length} ${esc(tr('Ingredients'))} · ${recipe.steps.length} ${esc(tr('Steps'))}</span>`}</summary><div class="import-preview-body">
+    return `<details class="import-preview-card" data-import-preview-card ${index === 0 ? 'open' : ''}><summary><div><p class="eyebrow">${index + 1}. ${esc(preview.strategy)}</p><h3>${esc(recipe.title || tr('Import preview'))}</h3></div>${saved ? `<span class="status-pill enabled">${esc(tr('Saved'))}</span>` : `<span class="import-preview-summary">${esc(trn('%n ingredient', '%n ingredients', recipe.ingredients.length))} · ${esc(trn('%n step', '%n steps', recipe.steps.length))}</span>`}</summary><div class="import-preview-body">
 		${preview.warnings.length ? `<div class="warning-list">${preview.warnings.map(warning => `<p>${esc(warning)}</p>`).join('')}</div>` : ''}
 		${coverImage ? `<img class="import-cover-preview" src="${attr(coverImage)}" alt="">` : ''}
 		<label>${esc(tr('Title'))}<input data-preview-title value="${attr(recipe.title)}"></label><label>${esc(tr('Description'))}<textarea data-preview-description rows="3">${esc(recipe.description)}</textarea></label>
 		<div class="form-grid import-preview-fields"><label>${esc(tr('Tags'))}<input data-preview-tags value="${attr(tags.join(', '))}" list="smartcook-import-tags" autocomplete="new-password"></label><label>${esc(tr('Categories'))}<input data-preview-categories value="${attr(categories.join(', '))}" list="smartcook-import-categories" autocomplete="new-password"></label><label>${esc(tr('Cuisine'))}<input data-preview-cuisine value="${attr(recipe.cuisine)}" list="smartcook-import-cuisine"></label><label>${esc(tr('Meal type'))}<input data-preview-meal-type value="${attr(recipe.mealType)}" list="smartcook-import-meal-type"></label><label class="span-2">${esc(tr('Cooking method'))}<input data-preview-cooking-method value="${attr(recipe.cookingMethod)}" list="smartcook-import-cooking-method"></label></div>
-		<div class="preview-metrics"><span>${recipe.servings} ${esc(tr('servings'))}</span><span>${recipe.prepTime} min ${esc(tr('prep'))}</span><span>${recipe.cookTime} min ${esc(tr('cook'))}</span><span>${recipe.totalTime} min ${esc(tr('total'))}</span></div>
+		<div class="preview-metrics"><span>${esc(trn('%n serving', '%n servings', recipe.servings))}</span><span>${recipe.prepTime} min ${esc(tr('prep'))}</span><span>${recipe.cookTime} min ${esc(tr('cook'))}</span><span>${recipe.totalTime} min ${esc(tr('total'))}</span></div>
 		${classification.length ? `<section class="import-classification"><h3>${esc(tr('Imported classification'))}</h3><dl>${classification.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl></section>` : ''}
 		${recipe.coverSuggestion ? `<section class="import-cover-suggestion"><span aria-hidden="true">${fa('wand-magic-sparkles')}</span><div><strong>${esc(tr('Suggested cover photo'))}</strong><p>${esc(recipe.coverSuggestion)}</p><small>${esc(tr('AI suggestion'))}</small></div></section>` : ''}
 		<div class="preview-columns"><label><h3>${esc(tr('Ingredients'))} <small>${recipe.ingredients.length}</small></h3><textarea data-preview-ingredients rows="12" aria-label="${attr(tr('Ingredients (one per line)'))}">${esc(ingredientText)}</textarea><small>${esc(tr('Quantity | unit | ingredient | notes'))}</small></label><label><h3>${esc(tr('Procedure'))} <small>${recipe.steps.length}</small></h3><textarea data-preview-steps rows="12" aria-label="${attr(tr('Steps (one per line)'))}">${esc(stepText)}</textarea><small>${esc(tr('Steps (one per line)'))}</small></label></div>
@@ -1925,7 +1922,7 @@ async function renderAdministration(view) {
     };
     const recipeSelector = () => {
         const visibleRecipes = filteredRecipes();
-        const selectedLabel = `${selectedRecipeIds.size} ${tr('recipes selected')}`;
+        const selectedLabel = `${trn('%n recipe selected', '%n recipes selected', selectedRecipeIds.size)}`;
         return `<section class="panel taxonomy-recipe-selector"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Select recipes'))}</p><h2>${esc(tr('Recipe'))}</h2></div><span class="taxonomy-selection-summary"><strong>${esc(selectedLabel)}</strong><button class="ghost icon-button taxonomy-clear-filters" data-clear-selected-recipes type="button" aria-label="${attr(tr('Clear selected recipes'))}" title="${attr(tr('Clear selected recipes'))}"${selectedRecipeIds.size ? '' : ' disabled'}>${fa('xmark')}</button></span></div><div class="toolbar taxonomy-admin-toolbar"><label class="search-field"><span>${fa('magnifying-glass')}</span><input data-admin-recipe-search value="${attr(recipeFilter)}" placeholder="${attr(tr('Filter recipes...'))}"></label><div class="taxonomy-filter">${taxonomyPicker('categories', taxonomy.categories || [], selectedCategories)}</div><div class="taxonomy-filter">${taxonomyPicker('tags', taxonomy.tags || [], selectedTags)}</div><button class="danger ghost" data-delete-selected-recipes type="button"${selectedRecipeIds.size ? '' : ' disabled'}>${esc(tr('Delete selected recipes'))}</button></div>${selectedTaxonomyValue ? `<p class="section-help">${esc(tr('Filtered by'))}: <strong>${esc(labels[selectedTaxonomyValue.kind])}: ${esc(selectedTaxonomyValue.name)}</strong> <button class="ghost" data-clear-taxonomy-filter type="button">${esc(tr('Clear filter'))}</button></p>` : ''}<label class="check-inline taxonomy-select-all"><input data-admin-select-all type="checkbox"${visibleRecipes.length > 0 && visibleRecipes.every(recipe => selectedRecipeIds.has(recipe.id)) ? ' checked' : ''}> ${esc(tr('Select filtered recipes'))}</label><div class="taxonomy-recipe-list">${visibleRecipes.map(recipe => `<label><input data-admin-recipe-id="${recipe.id}" type="checkbox"${selectedRecipeIds.has(recipe.id) ? ' checked' : ''}><span><strong>${esc(recipe.title)}</strong>${recipe.cuisine ? `<small>${esc(recipe.cuisine)}</small>` : ''}</span></label>`).join('') || `<p class="section-help">${esc(tr('No recipes found'))}</p>`}</div></section>`;
     };
     const bindRecipeSelector = () => {
@@ -1953,7 +1950,7 @@ async function renderAdministration(view) {
         }).join('');
         if (true) {
             const progressText = `${analysisProgress.completed} / ${analysisProgress.total}`;
-            view.innerHTML = `${administrationTabs()}${recipeSelector()}<section class="panel refinement-intro"><div class="section-heading"><div><p class="eyebrow">${esc(tr('AI refinement'))}</p><h2>${esc(tr('Improve recipe organization'))}</h2><p class="section-help">${esc(tr('AI reviews identity and organization. It can propose a procedure only when one is missing. Ingredients and existing procedure are never changed. Review every proposal before applying it.'))}</p></div></div><div class="toolbar taxonomy-admin-toolbar"><strong>${selectedIds.length} ${esc(tr('recipes selected'))}</strong><button class="primary" data-refinement-analyze type="button"${selectedIds.length && !analysisRunning ? '' : ' disabled'}>${esc(tr('Analyze selected recipes'))}</button></div></section>${refinementProposals.length ? `<section class="section-heading refinement-results-heading"><div><p class="eyebrow">${esc(tr('Preview'))}</p><h2>${esc(tr('Suggested changes'))}</h2></div><button class="primary" data-refinement-apply type="button"${analysisRunning ? ' disabled' : ''}>${esc(tr('Apply approved changes'))}</button></section>${proposalRows}` : ''}<div class="blocking-modal" data-refinement-loading${analysisRunning ? '' : ' hidden'} role="dialog" aria-modal="true" aria-labelledby="smartcook-refinement-loading-title"><div class="blocking-modal-card"><div class="loading-spinner" aria-hidden="true"></div><h2 id="smartcook-refinement-loading-title">${esc(tr('Analyzing recipes'))}</h2><p>${esc(analysisProgress.title || tr('Loading...'))}</p><strong>${esc(progressText)}</strong><button class="danger secondary" data-refinement-cancel type="button">${esc(tr('Cancel analysis'))}</button></div></div>`;
+            view.innerHTML = `${administrationTabs()}${recipeSelector()}<section class="panel refinement-intro"><div class="section-heading"><div><p class="eyebrow">${esc(tr('AI refinement'))}</p><h2>${esc(tr('Improve recipe organization'))}</h2><p class="section-help">${esc(tr('AI reviews identity and organization. It can propose a procedure only when one is missing. Ingredients and existing procedure are never changed. Review every proposal before applying it.'))}</p></div></div><div class="toolbar taxonomy-admin-toolbar"><strong>${esc(trn('%n recipe selected', '%n recipes selected', selectedIds.length))}</strong><button class="primary" data-refinement-analyze type="button"${selectedIds.length && !analysisRunning ? '' : ' disabled'}>${esc(tr('Analyze selected recipes'))}</button></div></section>${refinementProposals.length ? `<section class="section-heading refinement-results-heading"><div><p class="eyebrow">${esc(tr('Preview'))}</p><h2>${esc(tr('Suggested changes'))}</h2></div><button class="primary" data-refinement-apply type="button"${analysisRunning ? ' disabled' : ''}>${esc(tr('Apply approved changes'))}</button></section>${proposalRows}` : ''}<div class="blocking-modal" data-refinement-loading${analysisRunning ? '' : ' hidden'} role="dialog" aria-modal="true" aria-labelledby="smartcook-refinement-loading-title"><div class="blocking-modal-card"><div class="loading-spinner" aria-hidden="true"></div><h2 id="smartcook-refinement-loading-title">${esc(tr('Analyzing recipes'))}</h2><p>${esc(analysisProgress.title || tr('Loading...'))}</p><strong>${esc(progressText)}</strong><button class="danger secondary" data-refinement-cancel type="button">${esc(tr('Cancel analysis'))}</button></div></div>`;
             view.insertAdjacentHTML('beforeend', `<div class="blocking-modal" data-refinement-applying hidden role="dialog" aria-modal="true" aria-labelledby="smartcook-refinement-applying-title"><div class="blocking-modal-card"><div class="loading-spinner" aria-hidden="true"></div><h2 id="smartcook-refinement-applying-title">${esc(tr('Applying approved changes'))}</h2><p>${esc(tr('Please wait while approved changes are saved.'))}</p></div></div>`);
             bindAdministrationTabs();
             bindRecipeSelector();
@@ -2012,7 +2009,7 @@ async function renderAdministration(view) {
                 if (modal) modal.hidden = false;
                 try {
                     const response = await working(() => request('/recipes/refinement/apply', { method: 'POST', json: { proposals } }));
-                    showNotice(`${asNumber(response.changed)} ${tr('recipes updated')}`);
+                    showNotice(`${trn('%n recipe updated', '%n recipes updated', asNumber(response.changed))}`);
                     refinementProposals = [];
                     await load();
                 } catch (_) {
@@ -2021,7 +2018,7 @@ async function renderAdministration(view) {
             });
             return;
         }
-        view.innerHTML = `${administrationTabs()}<section class="panel refinement-intro"><div class="section-heading"><div><p class="eyebrow">${esc(tr('AI refinement'))}</p><h2>${esc(tr('Improve recipe organization'))}</h2><p class="section-help">${esc(tr('AI reviews identity and organization. It can propose a procedure only when one is missing. Ingredients and existing procedure are never changed. Review every proposal before applying it.'))}</p></div></div><div class="toolbar taxonomy-admin-toolbar"><label class="search-field"><span>${fa('magnifying-glass')}</span><input data-refinement-search value="${attr(recipeFilter)}" placeholder="${attr(tr('Filter recipes...'))}"></label><strong>${selectedIds.length} ${esc(tr('recipes selected'))}</strong><button class="secondary" data-refinement-select-all type="button">${esc(tr('Select all recipes'))}</button><button class="primary" data-refinement-analyze type="button"${selectedIds.length ? '' : ' disabled'}>${esc(tr('Analyze selected recipes'))}</button></div><div class="taxonomy-recipe-list">${recipes.filter(recipe => `${recipe.title} ${recipe.cuisine || ''}`.toLocaleLowerCase().includes(recipeFilter.trim().toLocaleLowerCase())).map(recipe => `<label><input data-refinement-id="${recipe.id}" type="checkbox"${selectedRecipeIds.has(recipe.id) ? ' checked' : ''}><span><strong>${esc(recipe.title)}</strong>${recipe.cuisine ? `<small>${esc(recipe.cuisine)}</small>` : ''}</span></label>`).join('') || `<p class="section-help">${esc(tr('No recipes found'))}</p>`}</div></section>${refinementProposals.length ? `<section class="section-heading refinement-results-heading"><div><p class="eyebrow">${esc(tr('Preview'))}</p><h2>${esc(tr('Suggested changes'))}</h2></div><button class="primary" data-refinement-apply type="button">${esc(tr('Apply approved changes'))}</button></section>${proposalRows}` : ''}`;
+        view.innerHTML = `${administrationTabs()}<section class="panel refinement-intro"><div class="section-heading"><div><p class="eyebrow">${esc(tr('AI refinement'))}</p><h2>${esc(tr('Improve recipe organization'))}</h2><p class="section-help">${esc(tr('AI reviews identity and organization. It can propose a procedure only when one is missing. Ingredients and existing procedure are never changed. Review every proposal before applying it.'))}</p></div></div><div class="toolbar taxonomy-admin-toolbar"><label class="search-field"><span>${fa('magnifying-glass')}</span><input data-refinement-search value="${attr(recipeFilter)}" placeholder="${attr(tr('Filter recipes...'))}"></label><strong>${esc(trn('%n recipe selected', '%n recipes selected', selectedIds.length))}</strong><button class="secondary" data-refinement-select-all type="button">${esc(tr('Select all recipes'))}</button><button class="primary" data-refinement-analyze type="button"${selectedIds.length ? '' : ' disabled'}>${esc(tr('Analyze selected recipes'))}</button></div><div class="taxonomy-recipe-list">${recipes.filter(recipe => `${recipe.title} ${recipe.cuisine || ''}`.toLocaleLowerCase().includes(recipeFilter.trim().toLocaleLowerCase())).map(recipe => `<label><input data-refinement-id="${recipe.id}" type="checkbox"${selectedRecipeIds.has(recipe.id) ? ' checked' : ''}><span><strong>${esc(recipe.title)}</strong>${recipe.cuisine ? `<small>${esc(recipe.cuisine)}</small>` : ''}</span></label>`).join('') || `<p class="section-help">${esc(tr('No recipes found'))}</p>`}</div></section>${refinementProposals.length ? `<section class="section-heading refinement-results-heading"><div><p class="eyebrow">${esc(tr('Preview'))}</p><h2>${esc(tr('Suggested changes'))}</h2></div><button class="primary" data-refinement-apply type="button">${esc(tr('Apply approved changes'))}</button></section>${proposalRows}` : ''}`;
         bindAdministrationTabs();
         view.querySelector('[data-refinement-search]')?.addEventListener('input', event => { recipeFilter = event.target.value; renderRefinement(); });
         view.querySelectorAll('[data-refinement-id]').forEach(input => input.addEventListener('change', () => { const id = asNumber(input.dataset.refinementId); input.checked ? selectedRecipeIds.add(id) : selectedRecipeIds.delete(id); renderRefinement(); }));
@@ -2040,7 +2037,7 @@ async function renderAdministration(view) {
             const proposals = refinementProposals.map(item => { const selection = refinementSelection.get(asNumber(item.recipeId)); return { recipeId: item.recipeId, fields: Object.fromEntries(Object.entries(item.proposal || {}).filter(([field]) => selection?.fields.has(field))), addCover: !!selection?.addCover }; }).filter(item => Object.keys(item.fields).length || item.addCover);
             if (!proposals.length || !window.confirm(tr('Apply the approved changes to the selected recipes?'))) return;
             const response = await working(() => request('/recipes/refinement/apply', { method: 'POST', json: { proposals } }));
-            showNotice(`${asNumber(response.changed)} ${tr('recipes updated')}`);
+            showNotice(`${trn('%n recipe updated', '%n recipes updated', asNumber(response.changed))}`);
             refinementProposals = [];
             await load();
         });
@@ -2061,10 +2058,10 @@ async function renderAdministration(view) {
             && hasSelectedTaxonomy(recipe.tags, selectedTags)
             && hasSelectedValue(recipe));
         const selectedCount = selectedRecipeIds.size;
-        const selectedLabel = `${selectedCount} ${tr('recipes selected')}`;
+        const selectedLabel = `${trn('%n recipe selected', '%n recipes selected', selectedCount)}`;
         const activeLabel = labels[activeKind];
         const activeItems = [...(taxonomy[activeKind] || [])].sort((left, right) => String(left.name || '').localeCompare(String(right.name || ''), undefined, { sensitivity: 'base' }));
-        const managementPanel = `<section class="panel taxonomy-admin-card"><div class="section-heading"><div><p class="eyebrow">${esc(activeLabel)}</p><h2>${esc(tr('Manage list'))}</h2></div></div><form data-taxonomy-add="${attr(activeKind)}" class="taxonomy-admin-add"><input name="name" required maxlength="255" placeholder="${attr(tr('New value...'))}"><button class="primary" type="submit">${esc(tr('Add'))}</button></form><div class="taxonomy-admin-items">${activeItems.map(item => `<article><div><strong>${esc(item.name)}</strong><small>${activeKind === 'ingredients' ? esc(item.category || tr('Uncategorized')) : `${asNumber(item.usageCount)} ${esc(tr('recipes'))}`}</small></div><div class="taxonomy-admin-actions">${activeKind === 'ingredients' ? `<button class="secondary" data-ingredient-edit="${item.id}" type="button">${esc(tr('Edit'))}</button>` : ''}<button class="secondary" data-taxonomy-select-recipes="${attr(activeKind)}:${item.id}" type="button">${esc(tr('Filter recipes with this value'))}</button><button class="secondary" data-taxonomy-assign="${attr(activeKind)}:${item.id}" type="button"${selectedCount ? '' : ' disabled'}>${esc(tr('Assign to selected'))}</button><button class="ghost" data-taxonomy-remove="${attr(activeKind)}:${item.id}" type="button"${selectedCount ? '' : ' disabled'}>${esc(tr('Remove from selected'))}</button><button class="danger ghost" data-taxonomy-delete="${attr(activeKind)}:${item.id}" type="button" aria-label="${attr(tr('Delete'))}">${fa('xmark')}</button></div></article>`).join('') || `<p class="section-help">${esc(tr('No values yet'))}</p>`}</div></section>`;
+        const managementPanel = `<section class="panel taxonomy-admin-card"><div class="section-heading"><div><p class="eyebrow">${esc(activeLabel)}</p><h2>${esc(tr('Manage list'))}</h2></div></div><form data-taxonomy-add="${attr(activeKind)}" class="taxonomy-admin-add"><input name="name" required maxlength="255" placeholder="${attr(tr('New value...'))}"><button class="primary" type="submit">${esc(tr('Add'))}</button></form><div class="taxonomy-admin-items">${activeItems.map(item => `<article><div><strong>${esc(item.name)}</strong><small>${activeKind === 'ingredients' ? esc(item.category || tr('Uncategorized')) : `${esc(trn('%n recipe', '%n recipes', asNumber(item.usageCount)))}`}</small></div><div class="taxonomy-admin-actions">${activeKind === 'ingredients' ? `<button class="secondary" data-ingredient-edit="${item.id}" type="button">${esc(tr('Edit'))}</button>` : ''}<button class="secondary" data-taxonomy-select-recipes="${attr(activeKind)}:${item.id}" type="button">${esc(tr('Filter recipes with this value'))}</button><button class="secondary" data-taxonomy-assign="${attr(activeKind)}:${item.id}" type="button"${selectedCount ? '' : ' disabled'}>${esc(tr('Assign to selected'))}</button><button class="ghost" data-taxonomy-remove="${attr(activeKind)}:${item.id}" type="button"${selectedCount ? '' : ' disabled'}>${esc(tr('Remove from selected'))}</button><button class="danger ghost" data-taxonomy-delete="${attr(activeKind)}:${item.id}" type="button" aria-label="${attr(tr('Delete'))}">${fa('xmark')}</button></div></article>`).join('') || `<p class="section-help">${esc(tr('No values yet'))}</p>`}</div></section>`;
         view.innerHTML = `${recipeSelector()}${administrationTabs()}<section class="panel taxonomy-recipe-selector legacy-taxonomy-recipe-selector"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Bulk editing'))}</p><h2>${esc(tr('Select recipes'))}</h2></div><strong data-selected-recipe-count>${esc(selectedLabel)}</strong></div><div class="toolbar taxonomy-admin-toolbar"><label class="search-field"><span>${fa('magnifying-glass')}</span><input data-admin-recipe-search value="${attr(recipeFilter)}" placeholder="${attr(tr('Filter recipes...'))}"></label><div class="taxonomy-filter">${taxonomyPicker('categories', taxonomy.categories || [], selectedCategories)}</div><div class="taxonomy-filter">${taxonomyPicker('tags', taxonomy.tags || [], selectedTags)}</div></div>${selectedTaxonomyValue ? `<p class="section-help">${esc(tr('Filtered by'))}: <strong>${esc(labels[selectedTaxonomyValue.kind])}: ${esc(selectedTaxonomyValue.name)}</strong> <button class="ghost" data-clear-taxonomy-filter type="button">${esc(tr('Clear filter'))}</button></p>` : ''}<label class="check-inline taxonomy-select-all"><input data-admin-select-all type="checkbox"${visibleRecipes.length > 0 && visibleRecipes.every(recipe => selectedRecipeIds.has(recipe.id)) ? ' checked' : ''}> ${esc(tr('Select filtered recipes'))}</label><div class="taxonomy-recipe-list">${visibleRecipes.map(recipe => `<label><input data-admin-recipe-id="${recipe.id}" type="checkbox"${selectedRecipeIds.has(recipe.id) ? ' checked' : ''}><span><strong>${esc(recipe.title)}</strong>${recipe.cuisine ? `<small>${esc(recipe.cuisine)}</small>` : ''}</span></label>`).join('') || `<p class="section-help">${esc(tr('No recipes found'))}</p>`}</div></section><nav class="tabs taxonomy-admin-tabs" aria-label="${attr(tr('Manage list'))}" role="tablist">${Object.entries(labels).map(([kind, label]) => `<button class="${kind === activeKind ? 'active' : ''}" data-admin-tab="${attr(kind)}" type="button" role="tab" aria-selected="${kind === activeKind}">${esc(label)}</button>`).join('')}</nav>${managementPanel}`;
         bindAdministrationTabs();
         view.querySelector('[data-admin-recipe-search]')?.addEventListener('input', event => {
@@ -2101,7 +2098,7 @@ async function renderAdministration(view) {
             const recipeIds = [...selectedRecipeIds];
             if (!recipeIds.length || !window.confirm(tr('Delete the selected recipes? This cannot be undone.'))) return;
             const response = await working(() => request('/recipes/delete', { method: 'POST', json: { recipeIds } }));
-            showNotice(`${asNumber(response.changed)} ${tr('recipes deleted')}`);
+            showNotice(`${trn('%n recipe deleted', '%n recipes deleted', asNumber(response.changed))}`);
             selectedRecipeIds.clear();
             await load();
         });
@@ -2117,7 +2114,7 @@ async function renderAdministration(view) {
             const [kind, id] = String(button.getAttribute(selector.slice(1, -1)) || '').split(':');
             if (!selectedIds().length || !window.confirm(message)) return;
             const response = await working(() => request(`/taxonomy/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/${action}`, { method: 'POST', json: { recipeIds: selectedIds() } }));
-            showNotice(`${asNumber(response.changed)} ${tr('recipes updated')}`);
+            showNotice(`${trn('%n recipe updated', '%n recipes updated', asNumber(response.changed))}`);
             await load();
         }));
         view.querySelectorAll('[data-ingredient-edit]' ).forEach(button => button.addEventListener('click', () => {
