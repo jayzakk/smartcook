@@ -43,7 +43,6 @@ const fallbackTranslations = {
         'Generate one from your recipes': 'Generane una dalle tue ricette',
         'No items yet': 'Nessun articolo',
         of: 'di',
-        completed: 'completati',
         Completed: 'Completata',
         'New list': 'Nuova lista',
         Decrease: 'Diminuisci',
@@ -263,9 +262,10 @@ const tr = (text) => {
     return fallbackTranslations[language]?.[text] || (smartWindow.t ? smartWindow.t(appId, text) : text);
 };
 // Plural-aware translation: the catalog keys are '_<singular>_::_<plural>_' (see l10n/*.json), '%n' is the count.
-const trn = (singular, plural, count) => smartWindow.n
-    ? smartWindow.n(appId, singular, plural, count)
-    : (count === 1 ? singular : plural).replace('%n', String(count));
+const trn = (singular, plural, count, vars = {}) => smartWindow.n
+    ? smartWindow.n(appId, singular, plural, count, vars)
+    : Object.entries(vars).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)),
+        (count === 1 ? singular : plural).replace('%n', String(count)));
 // Canonical unit codes stored by the backend (see TextNormalizer::UNIT_ALIASES) that get a
 // language-specific label from the translation catalog; every other unit (g, kg, ml, ...) is shown as stored.
 const unitLabels = () => ({
@@ -730,7 +730,7 @@ function recipeViewer(recipe) {
     }).join('');
     return `<div class="recipe-view-shell"><article class="recipe-view panel">
         <header class="recipe-view-header"><div class="recipe-view-image-wrap">${image ? `<img class="recipe-view-image" src="${attr(image)}" alt="">` : `<div class="recipe-view-image image-placeholder" aria-hidden="true"><span>${esc(recipe.title.slice(0, 1).toUpperCase())}</span></div><button class="cover-search-button" data-find-cover type="button" title="${attr(tr('Find cover image'))}" aria-label="${attr(tr('Find cover image'))}">${fa('wand-magic-sparkles')}</button>`}</div><div class="recipe-view-heading"><p class="eyebrow">${esc(categoryLabel)}</p><h2>${esc(recipe.title)}</h2>${recipe.subtitle ? `<p class="recipe-view-subtitle">${esc(recipe.subtitle)}</p>` : ''}${recipe.description ? `<p class="recipe-view-description">${esc(recipe.description)}</p>` : ''}${sourceUrl ? `<div class="recipe-view-actions"><a class="secondary recipe-source-link" href="${attr(sourceUrl)}" target="_blank" rel="noopener noreferrer" title="${attr(tr('Open source'))}">${fa('arrow-up-right-from-square')}${esc(tr('Open source'))}${sourceLabel ? `: ${esc(sourceLabel)}` : ''}</a></div>` : ''}</div></header>
-        <div class="recipe-view-meta"><div class="recipe-view-metric recipe-view-servings"><span class="recipe-view-metric-label">${esc(tr('Servings'))}</span><div class="recipe-view-servings-controls"><button class="stepper-btn" data-recipe-servings-step="-1" type="button" aria-label="${attr(`${tr('Decrease')} ${tr('servings')}`)}"${asNumber(recipe.servings) <= 1 ? ' disabled' : ''}>${fa('minus')}</button><strong data-recipe-servings aria-live="polite">${Math.max(1, asNumber(recipe.servings, 1))}</strong><button class="stepper-btn" data-recipe-servings-step="1" type="button" aria-label="${attr(`${tr('Increase')} ${tr('servings')}`)}">${fa('plus')}</button></div></div>${calories > 0 ? `<div class="recipe-view-metric recipe-view-calories"><span class="recipe-view-metric-label">${esc(tr('kcal x 1 serving'))}</span><strong>${calories}</strong></div>` : ''}<div class="recipe-view-time-group"><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Preparation'))}</span><strong>${asNumber(recipe.prepTime)} <small>min</small></strong></div><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Cooking'))}</span><strong>${asNumber(recipe.cookTime)} <small>min</small></strong></div><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Total'))}</span><strong>${asNumber(recipe.totalTime)} <small>min</small></strong></div></div></div>
+        <div class="recipe-view-meta"><div class="recipe-view-metric recipe-view-servings"><span class="recipe-view-metric-label">${esc(tr('Servings'))}</span><div class="recipe-view-servings-controls"><button class="stepper-btn" data-recipe-servings-step="-1" type="button" aria-label="${attr(tr('Decrease servings'))}"${asNumber(recipe.servings) <= 1 ? ' disabled' : ''}>${fa('minus')}</button><strong data-recipe-servings aria-live="polite">${Math.max(1, asNumber(recipe.servings, 1))}</strong><button class="stepper-btn" data-recipe-servings-step="1" type="button" aria-label="${attr(tr('Increase servings'))}">${fa('plus')}</button></div></div>${calories > 0 ? `<div class="recipe-view-metric recipe-view-calories"><span class="recipe-view-metric-label">${esc(tr('kcal x 1 serving'))}</span><strong>${calories}</strong></div>` : ''}<div class="recipe-view-time-group"><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Preparation'))}</span><strong>${asNumber(recipe.prepTime)} <small>min</small></strong></div><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Cooking'))}</span><strong>${asNumber(recipe.cookTime)} <small>min</small></strong></div><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Total'))}</span><strong>${asNumber(recipe.totalTime)} <small>min</small></strong></div></div></div>
         <div class="recipe-view-content"><section><h3>${esc(tr('Ingredients'))}</h3><ul class="recipe-view-ingredients">${ingredientItems || `<li>${esc(tr('No data yet'))}</li>`}</ul></section><section><h3>${esc(tr('Procedure'))}</h3><ol class="recipe-view-steps">${steps || `<li>${esc(tr('No data yet'))}</li>`}</ol></section></div>
     </article>${recipe.id ? `<div class="recipe-view-footer-actions"><details class="recipe-view-download"><summary>${esc(tr('Download'))}${fa('chevron-down', 'recipe-dropdown-icon')}</summary><div><a href="${attr(exportUrl(recipe.id, 'json'))}">JSON-LD</a><a href="${attr(exportUrl(recipe.id, 'markdown'))}">Markdown</a><a href="${attr(exportUrl(recipe.id, 'html'))}">HTML</a></div></details><details class="recipe-view-actions-menu"><summary>${esc(tr('Actions'))}${fa('chevron-down', 'recipe-dropdown-icon')}</summary><div><button data-share-recipe type="button">${fa('share-nodes')}<span>${esc(tr('Share'))}</span></button>${recipe.excludeFromPlanner ? '' : `<button data-add-to-today type="button">${fa('calendar-plus')}<span>${esc(tr('Add to today\'s plan'))}</span></button>`}<button data-add-to-shopping type="button">${fa('cart-plus')}<span>${esc(tr('Add to shopping list'))}</span></button><button data-refine-recipe type="button">${fa('wand-magic-sparkles')}<span>${esc(tr('Optimize organization with AI'))}</span></button><a href="#/recipes/${recipe.id}/edit">${fa('pen-to-square')}<span>${esc(tr('Edit recipe'))}</span></a></div></details></div>` : ''}</div>`;
 }
@@ -1817,7 +1817,7 @@ async function renderShopping(view) {
             return tr('No items yet');
         if (list.checkedCount >= list.itemCount)
             return tr('Completed');
-        return `${list.checkedCount} ${tr('of')} ${list.itemCount} ${tr('completed')}`;
+        return trn('{checked} of %n item completed', '{checked} of %n items completed', list.itemCount, { checked: list.checkedCount });
     };
     const groupItems = (items) => {
         const groups = new Map();
