@@ -34,7 +34,7 @@ final class ExternalDocumentTextExtractor implements DocumentTextExtractorInterf
                 'multipart' => [
                     ['name' => 'file', 'contents' => $handle, 'filename' => $originalName, 'headers' => ['Content-Type' => $mimeType]],
                     ['name' => 'mimeType', 'contents' => $mimeType],
-                    ['name' => 'language', 'contents' => (string)($config['language'] ?? 'ita+eng')],
+                    ['name' => 'language', 'contents' => (string)($config['language'] ?? 'eng')],
                 ],
                 'timeout' => (int)($config['timeout'] ?? 90),
             ]);
