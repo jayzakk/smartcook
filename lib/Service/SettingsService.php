@@ -78,6 +78,14 @@ final class SettingsService {
             if ($key === 'measurementSystem' && !in_array($value, ['metric', 'imperial'], true)) {
                 continue;
             }
+            if ($key === 'language') {
+                // 'auto' (or an empty field) follows the Nextcloud language, anything else must look like a language code.
+                $value = trim((string)$value);
+                $value = ($value === '' || strtolower($value) === 'auto') ? 'auto' : $value;
+                if ($value !== 'auto' && !preg_match('/^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})*$/', $value)) {
+                    continue;
+                }
+            }
             if ($key === 'aiProvider' && !in_array($value, ['disabled', 'nextcloud', 'openai', 'openrouter', 'ollama', 'localai', 'mistral', 'anthropic', 'gemini', 'custom'], true)) {
                 continue;
             }

@@ -290,6 +290,40 @@ const localizeApiMessage = (message) => {
     }
     return tr(text);
 };
+// Default language for imports, AI answers and new recipes: the "Default language" setting, where 'auto'
+// (or an empty value) means the Nextcloud interface language.
+let languageSetting = 'auto';
+let languageSettingLoaded = false;
+const defaultLanguage = () => {
+    const value = String(languageSetting || '').trim();
+    return value && value.toLowerCase() !== 'auto' ? value : (document.documentElement.lang || 'en');
+};
+async function loadLanguageSetting() {
+    if (languageSettingLoaded)
+        return;
+    languageSettingLoaded = true;
+    try {
+        languageSetting = (await request('/settings')).settings?.language ?? 'auto';
+    }
+    catch {
+        // Keep 'auto': the interface language is a safe default.
+    }
+}
+// Autocompletion for language inputs: <datalist> with common language codes, named in the interface language.
+const languageCodes = ['ar', 'bg', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fi', 'fr', 'he', 'hi', 'hr', 'hu', 'id', 'it', 'ja', 'ko', 'lt', 'lv', 'nb', 'nl', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sr', 'sv', 'tr', 'uk', 'vi', 'zh'];
+function ensureLanguageLists() {
+    if (document.getElementById('smartcook-languages'))
+        return;
+    let names = null;
+    try {
+        names = new Intl.DisplayNames([document.documentElement.lang || 'en'], { type: 'language' });
+    }
+    catch {
+        names = null;
+    }
+    const options = languageCodes.map(code => `<option value="${code}" label="${attr(names?.of(code) || code)}"></option>`).join('');
+    document.body.insertAdjacentHTML('beforeend', `<datalist id="smartcook-languages">${options}</datalist><datalist id="smartcook-language-settings"><option value="auto" label="${attr(tr('Automatic (Nextcloud language)'))}"></option>${options}</datalist>`);
+}
 // Canonical unit codes stored by the backend (see TextNormalizer::UNIT_ALIASES) that get a
 // language-specific label from the translation catalog; every other unit (g, kg, ml, ...) is shown as stored.
 const unitLabels = () => ({
@@ -441,7 +475,7 @@ function clearNotice(type) {
 }
 function emptyRecipe() {
     return {
-        title: '', subtitle: null, description: null, language: document.documentElement.lang || 'en', author: null,
+        title: '', subtitle: null, description: null, language: defaultLanguage(), author: null,
         sourceName: null, sourceUrl: null, license: null, status: 'draft', visibility: 'private', favorite: false, excludeFromPlanner: false,
         servings: 4, yieldText: null, prepTime: 0, restTime: 0, cookTime: 0, totalTime: 0, difficulty: null,
         costCents: null, currency: 'EUR', cuisine: null, mealType: null, cookingMethod: null,
@@ -668,7 +702,7 @@ async function renderRecipes(view, routeParams = new URLSearchParams()) {
     await load();
 }
 function textInput(label, field, value, options = {}) {
-    return `<label class="${attr(options.className || '')}">${esc(label)}<input data-field="${attr(field)}" type="${attr(options.type || 'text')}" value="${attr(value)}"${options.placeholder ? ` placeholder="${attr(options.placeholder)}"` : ''}${options.min !== undefined ? ` min="${options.min}"` : ''}${options.step !== undefined ? ` step="${options.step}"` : ''}></label>`;
+    return `<label class="${attr(options.className || '')}">${esc(label)}<input data-field="${attr(field)}" type="${attr(options.type || 'text')}" value="${attr(value)}"${options.placeholder ? ` placeholder="${attr(options.placeholder)}"` : ''}${options.list ? ` list="${attr(options.list)}" autocomplete="off"` : ''}${options.min !== undefined ? ` min="${options.min}"` : ''}${options.step !== undefined ? ` step="${options.step}"` : ''}></label>`;
 }
 function labelInput(label, control, className = '') {
     return `<label class="${attr(className)}">${esc(label)}${control}</label>`;
@@ -1168,7 +1202,7 @@ function editorForm(recipe, taxonomy = {}, step = 1) {
 	const costAmount = recipe.costCents === null || recipe.costCents === undefined ? '' : (asNumber(recipe.costCents) / 100).toFixed(2);
     const steps = [[tr('Identity'), tr('Recipe')], [tr('Ingredients'), tr('Structured list')], [tr('Procedure'), tr('Method')], [tr('Organization'), tr('Classification')], [tr('Advanced'), tr('Attachments')]];
     const navigation = `<nav class="recipe-wizard" aria-label="${attr(tr('Recipe details'))}">${steps.map(([label, detail], index) => `<button class="${step === index + 1 ? 'active' : step > index + 1 ? 'complete' : ''}" data-wizard-step="${index + 1}" type="button"><span>${index + 1}</span><b>${esc(label)}</b><small>${esc(detail)}</small></button>`).join('')}</nav>`;
-    const identity = `<section class="form-section wizard-panel"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Identity'))}</p><h2>${esc(tr('Recipe'))}</h2></div></div><div class="form-grid">${textInput(tr('Title'), 'title', recipe.title, { className: 'span-2' })}${textInput(tr('Subtitle'), 'subtitle', recipe.subtitle, { className: 'span-2' })}${textareaInput(tr('Description'), 'description', recipe.description, 4, 'span-2')}${textInput(tr('Author'), 'author', recipe.author)}${textInput(tr('Language'), 'language', recipe.language)}${textInput(tr('Source name'), 'sourceName', recipe.sourceName)}${textInput(tr('Source URL'), 'sourceUrl', recipe.sourceUrl, { type: 'url' })}${textInput(tr('License'), 'license', recipe.license)}${selectInput(tr('Status'), 'status', recipe.status, [['draft', tr('Draft')], ['published', tr('Published')]])}${selectInput(tr('Visibility'), 'visibility', recipe.visibility, [['private', tr('Private')], ['shared', tr('Shared')], ['public', tr('Public')]])}</div><div class="section-heading compact-heading"><div><p class="eyebrow">${esc(tr('Yield and timing'))}</p><h2>${esc(tr('Planning data'))}</h2></div></div><div class="planning-grid">${textInput(tr('Servings'), 'servings', recipe.servings, { type: 'number', min: 1 })}${textInput(tr('Yield'), 'yieldText', recipe.yieldText)}${textInput(tr('Preparation (min)'), 'prepTime', recipe.prepTime, { type: 'number', min: 0 })}${textInput(tr('Rest (min)'), 'restTime', recipe.restTime, { type: 'number', min: 0 })}${textInput(tr('Cooking (min)'), 'cookTime', recipe.cookTime, { type: 'number', min: 0 })}${selectInput(tr('Difficulty'), 'difficulty', String(difficultyScore(recipe.difficulty) || ''), [['', tr('Select an option')], ['1', tr('1 - Very easy')], ['2', tr('2 - Easy')], ['3', tr('3 - Medium')], ['4', tr('4 - Difficult')], ['5', tr('5 - Very difficult')]])}${textInput(tr('Calories'), 'calories', recipe.calories, { type: 'number', min: 0 })}<label class="planning-cost">${esc(tr('Cost and currency'))}<span><input data-field="costAmount" type="number" min="0" step="0.01" inputmode="decimal" value="${attr(costAmount)}" placeholder="0.00"><input data-field="currency" value="${attr(recipe.currency || 'EUR')}" maxlength="3" aria-label="${attr(tr('Currency'))}"></span></label><label class="check-inline"><input data-field="excludeFromPlanner" type="checkbox"${recipe.excludeFromPlanner ? ' checked' : ''}> ${esc(tr('Exclude from meal planner'))}</label></div></section>`;
+    const identity = `<section class="form-section wizard-panel"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Identity'))}</p><h2>${esc(tr('Recipe'))}</h2></div></div><div class="form-grid">${textInput(tr('Title'), 'title', recipe.title, { className: 'span-2' })}${textInput(tr('Subtitle'), 'subtitle', recipe.subtitle, { className: 'span-2' })}${textareaInput(tr('Description'), 'description', recipe.description, 4, 'span-2')}${textInput(tr('Author'), 'author', recipe.author)}${textInput(tr('Language'), 'language', recipe.language, { list: 'smartcook-languages' })}${textInput(tr('Source name'), 'sourceName', recipe.sourceName)}${textInput(tr('Source URL'), 'sourceUrl', recipe.sourceUrl, { type: 'url' })}${textInput(tr('License'), 'license', recipe.license)}${selectInput(tr('Status'), 'status', recipe.status, [['draft', tr('Draft')], ['published', tr('Published')]])}${selectInput(tr('Visibility'), 'visibility', recipe.visibility, [['private', tr('Private')], ['shared', tr('Shared')], ['public', tr('Public')]])}</div><div class="section-heading compact-heading"><div><p class="eyebrow">${esc(tr('Yield and timing'))}</p><h2>${esc(tr('Planning data'))}</h2></div></div><div class="planning-grid">${textInput(tr('Servings'), 'servings', recipe.servings, { type: 'number', min: 1 })}${textInput(tr('Yield'), 'yieldText', recipe.yieldText)}${textInput(tr('Preparation (min)'), 'prepTime', recipe.prepTime, { type: 'number', min: 0 })}${textInput(tr('Rest (min)'), 'restTime', recipe.restTime, { type: 'number', min: 0 })}${textInput(tr('Cooking (min)'), 'cookTime', recipe.cookTime, { type: 'number', min: 0 })}${selectInput(tr('Difficulty'), 'difficulty', String(difficultyScore(recipe.difficulty) || ''), [['', tr('Select an option')], ['1', tr('1 - Very easy')], ['2', tr('2 - Easy')], ['3', tr('3 - Medium')], ['4', tr('4 - Difficult')], ['5', tr('5 - Very difficult')]])}${textInput(tr('Calories'), 'calories', recipe.calories, { type: 'number', min: 0 })}<label class="planning-cost">${esc(tr('Cost and currency'))}<span><input data-field="costAmount" type="number" min="0" step="0.01" inputmode="decimal" value="${attr(costAmount)}" placeholder="0.00"><input data-field="currency" value="${attr(recipe.currency || 'EUR')}" maxlength="3" aria-label="${attr(tr('Currency'))}"></span></label><label class="check-inline"><input data-field="excludeFromPlanner" type="checkbox"${recipe.excludeFromPlanner ? ' checked' : ''}> ${esc(tr('Exclude from meal planner'))}</label></div></section>`;
     const ingredients = `<section class="form-section wizard-panel"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Structured list'))}</p><h2>${esc(tr('Ingredients'))}</h2></div></div><div class="ingredient-table"><div class="ingredient-head"><span>${esc(tr('Quantity'))}</span><span>${esc(tr('Unit'))}</span><span>${esc(tr('Ingredient'))}</span><span>${esc(tr('Notes'))}</span><span>${esc(tr('Optional'))}</span></div><div data-ingredients>${(recipe.ingredients.length ? recipe.ingredients : [{ name: '' }]).map(item => ingredientRow(item)).join('')}</div></div></section>`;
     const procedureSteps = recipe.steps.length ? recipe.steps : [{ text: '' }];
     const procedure = `<section class="form-section wizard-panel"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Method'))}</p><h2>${esc(tr('Procedure'))}</h2></div></div><div class="step-list" data-steps>${procedureSteps.map((item, index) => stepRow(item, index, procedureSteps.length)).join('')}</div></section>`;
@@ -1370,7 +1404,7 @@ async function renderAssistant(view) {
                 return;
             }
             lastQuestion = question;
-            const result = await working(() => request('/assistant/chat', { method: 'POST', json: { question, language: document.documentElement.lang || 'it' } }));
+            const result = await working(() => request('/assistant/chat', { method: 'POST', json: { question, language: defaultLanguage() } }));
             response = result.response;
             paint();
         });
@@ -1431,7 +1465,7 @@ async function renderImport(view) {
 			<article class="panel form-section">
 				<div class="source-tabs">${[['url', 'URL'], ['text', tr('Text')], ['markdown', 'Markdown'], ['json', 'JSON'], ['file', tr('File / OCR')]].map(([id, label]) => `<button type="button" data-import-kind="${id}" class="${kind === id ? 'active' : ''}">${esc(label)}</button>`).join('')}</div>
 	            ${kind === 'url' ? `<label>${esc(tr('Recipe URL'))}<input data-import-url type="url" placeholder="https://example.com/recipe"></label>` : kind === 'file' ? `<label>${esc(tr('PDF, image, Markdown, HTML or JSON'))}<input data-import-file type="file" multiple accept="image/*,.pdf,.txt,.md,.markdown,.html,.htm,.json"><small>${esc(tr('Select one or more files. Images and PDFs require a configured OCR/document extractor.'))}</small></label>` : `<label>${esc(tr('Source content'))}<textarea data-import-text rows="18" placeholder="${attr(tr('Paste the recipe, including ingredients and procedure...'))}"></textarea></label>`}
-				<div class="form-grid"><label>${esc(tr('Output language'))}<input data-import-language value="${attr(document.documentElement.lang || 'it')}"></label><label>${esc(tr('AI provider override'))}<select data-import-provider><option value="">${esc(tr('Use settings'))}</option><option value="nextcloud">Nextcloud Assistant</option><option value="openai">OpenAI</option><option value="openrouter">OpenRouter</option><option value="ollama">Ollama</option><option value="localai">LocalAI</option><option value="mistral">Mistral</option><option value="anthropic">Anthropic</option><option value="gemini">Gemini</option></select></label></div>
+				<div class="form-grid"><label>${esc(tr('Output language'))}<input data-import-language list="smartcook-languages" autocomplete="off" value="${attr(defaultLanguage())}"></label><label>${esc(tr('AI provider override'))}<select data-import-provider><option value="">${esc(tr('Use settings'))}</option><option value="nextcloud">Nextcloud Assistant</option><option value="openai">OpenAI</option><option value="openrouter">OpenRouter</option><option value="ollama">Ollama</option><option value="localai">LocalAI</option><option value="mistral">Mistral</option><option value="anthropic">Anthropic</option><option value="gemini">Gemini</option></select></label></div>
 				<label class="check-inline ai-toggle"><input data-import-ai type="checkbox"><span><b>${esc(tr('Use AI refinement'))}</b><small>${esc(tr('Optional fallback for incomplete or unstructured sources'))}</small></span></label>
 				<button class="primary" data-extract type="button">${esc(tr('Extract recipe data'))}</button>
 			</article>
@@ -2252,7 +2286,7 @@ dnf install -y tesseract tesseract-langpack-ita tesseract-langpack-eng poppler-u
 async function renderSettings(view) {
     const settings = (await working(() => request('/settings'))).settings;
 	view.innerHTML = `<div class="settings-layout"><main class="view-stack"><div class="editor-actions settings-actions"><div><button class="primary" data-save-settings type="button">${esc(tr('Save settings'))}</button></div></div>
-		<section class="panel form-section"><div class="section-heading"><div><p class="eyebrow">${esc(tr('General'))}</p><h2>${esc(tr('Library preferences'))}</h2></div></div><div class="form-grid"><label>${esc(tr('Default language'))}<input data-setting="language" value="${attr(settings.language)}" placeholder="auto / it / en"></label><label>${esc(tr('Measurement system'))}<select data-setting="measurementSystem"><option value="metric"${settings.measurementSystem === 'metric' ? ' selected' : ''}>${esc(tr('Metric'))}</option><option value="imperial"${settings.measurementSystem === 'imperial' ? ' selected' : ''}>${esc(tr('Imperial'))}</option></select></label><label class="span-2">${esc(tr('Attachments folder in Nextcloud Files'))}<input data-setting="attachmentsFolder" value="${attr(settings.attachmentsFolder)}"></label><label>${esc(tr('Maximum URL import size'))}<input data-setting="maxImportBytes" type="number" min="100000" max="20000000" value="${settings.maxImportBytes}"><small>${esc(tr('bytes'))}</small></label></div></section>
+		<section class="panel form-section"><div class="section-heading"><div><p class="eyebrow">${esc(tr('General'))}</p><h2>${esc(tr('Library preferences'))}</h2></div></div><div class="form-grid"><label>${esc(tr('Default language'))}<input data-setting="language" list="smartcook-language-settings" autocomplete="off" value="${attr(settings.language)}" placeholder="${attr(tr('auto or a language code, e.g. de'))}"><small>${esc(tr('"auto" uses the Nextcloud language. It is the default for imports, AI answers and new recipes.'))}</small></label><label>${esc(tr('Measurement system'))}<select data-setting="measurementSystem"><option value="metric"${settings.measurementSystem === 'metric' ? ' selected' : ''}>${esc(tr('Metric'))}</option><option value="imperial"${settings.measurementSystem === 'imperial' ? ' selected' : ''}>${esc(tr('Imperial'))}</option></select></label><label class="span-2">${esc(tr('Attachments folder in Nextcloud Files'))}<input data-setting="attachmentsFolder" value="${attr(settings.attachmentsFolder)}"></label><label>${esc(tr('Maximum URL import size'))}<input data-setting="maxImportBytes" type="number" min="100000" max="20000000" value="${settings.maxImportBytes}"><small>${esc(tr('bytes'))}</small></label></div></section>
 		<section class="panel form-section"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Optional intelligence'))}</p><h2>${esc(tr('AI provider'))}</h2></div><span class="status-pill ${settings.aiProvider !== 'disabled' ? 'enabled' : ''}">${esc(settings.aiProvider === 'disabled' ? tr('Disabled') : tr('Enabled'))}</span></div><div class="form-grid">
 			<label>${esc(tr('Provider'))}<select data-setting="aiProvider"><option value="disabled">${esc(tr('Disabled'))}</option><option value="nextcloud">Nextcloud Assistant</option><option value="openai">OpenAI</option><option value="openrouter">OpenRouter</option><option value="ollama">Ollama</option><option value="localai">LocalAI</option><option value="mistral">Mistral</option><option value="anthropic">Anthropic</option><option value="gemini">Gemini</option><option value="custom">${esc(tr('Custom OpenAI-compatible'))}</option></select></label>
 			<label>${esc(tr('Model'))}<input data-setting="aiModel" value="${attr(settings.aiModel)}"></label><label class="span-2">${esc(tr('Endpoint'))}<input data-setting="aiEndpoint" type="url" value="${attr(settings.aiEndpoint)}" placeholder="https://..."><small>${esc(tr('Leave empty for the provider default. Ollama and LocalAI use local defaults.'))}</small></label>
@@ -2288,6 +2322,7 @@ async function renderSettings(view) {
         payload.clearPexelsApiKey = view.querySelector('[data-setting-clear="pexelsApiKey"]')?.checked || false;
         payload.clearUnsplashAccessKey = view.querySelector('[data-setting-clear="unsplashAccessKey"]')?.checked || false;
         await working(() => request('/settings', { method: 'PUT', json: { settings: payload } }));
+        languageSetting = String(payload.language ?? languageSetting);
         showNotice(tr('Settings saved'));
         await renderSettings(view);
     });
@@ -2328,6 +2363,8 @@ async function renderPublic(rootNode) {
 async function route() {
     if (!root)
         return;
+    await loadLanguageSetting();
+    ensureLanguageLists();
     const current = parseRoute();
     const view = renderShell(current.section, current.id);
     try {
