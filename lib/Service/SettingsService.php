@@ -12,6 +12,19 @@ final class SettingsService {
     /** Former built-in default of aiPlannerPrompt; it was stored verbatim whenever settings were saved. */
     private const LEGACY_PLANNER_PROMPT = 'Organizza una settimana varia e realistica usando esclusivamente le ricette disponibili.';
 
+    /** Former built-in default of ocrLanguage; it was stored verbatim whenever settings were saved. */
+    private const LEGACY_OCR_LANGUAGE = 'ita+eng';
+
+    /** Nextcloud language (primary subtag) => Tesseract language pack. */
+    private const TESSERACT_LANGUAGES = [
+        'ar' => 'ara', 'bg' => 'bul', 'ca' => 'cat', 'cs' => 'ces', 'da' => 'dan', 'de' => 'deu', 'el' => 'ell', 'en' => 'eng',
+        'es' => 'spa', 'et' => 'est', 'eu' => 'eus', 'fi' => 'fin', 'fr' => 'fra', 'gl' => 'glg', 'he' => 'heb', 'hi' => 'hin',
+        'hr' => 'hrv', 'hu' => 'hun', 'id' => 'ind', 'is' => 'isl', 'it' => 'ita', 'ja' => 'jpn', 'ko' => 'kor', 'lt' => 'lit',
+        'lv' => 'lav', 'nb' => 'nor', 'nl' => 'nld', 'nn' => 'nor', 'no' => 'nor', 'pl' => 'pol', 'pt' => 'por', 'ro' => 'ron',
+        'ru' => 'rus', 'sk' => 'slk', 'sl' => 'slv', 'sr' => 'srp', 'sv' => 'swe', 'th' => 'tha', 'tr' => 'tur', 'uk' => 'ukr',
+        'vi' => 'vie', 'zh' => 'chi_sim',
+    ];
+
     private const DEFAULTS = [
         'language' => 'auto',
         'measurementSystem' => 'metric',
@@ -27,7 +40,7 @@ final class SettingsService {
         'plannerServings' => '2',
         'ocrProvider' => 'disabled',
         'ocrEndpoint' => '',
-        'ocrLanguage' => 'ita+eng',
+        'ocrLanguage' => '',
         'tesseractPath' => 'tesseract',
         'pdfToTextPath' => 'pdftotext',
         'maxImportBytes' => '3000000',
@@ -47,6 +60,11 @@ final class SettingsService {
         // An empty prompt means "use the built-in default in the user's language" (see AiPromptFactory).
         if (trim((string)$result['aiPlannerPrompt']) === self::LEGACY_PLANNER_PROMPT) {
             $result['aiPlannerPrompt'] = '';
+        }
+        // An empty OCR language means "the language packs of the user's Nextcloud language, plus English".
+        $result['ocrLanguageDefault'] = $this->defaultOcrLanguage($userId);
+        if (trim((string)$result['ocrLanguage']) === self::LEGACY_OCR_LANGUAGE) {
+            $result['ocrLanguage'] = '';
         }
         $result['aiTemperature'] = (float)$result['aiTemperature'];
         $result['aiTimeout'] = (int)$result['aiTimeout'];
@@ -152,11 +170,25 @@ final class SettingsService {
             'provider' => $settings['ocrProvider'],
             'endpoint' => $settings['ocrEndpoint'],
             'apiKey' => $settings['ocrApiKey'],
-            'language' => $settings['ocrLanguage'],
+            'language' => trim((string)$settings['ocrLanguage']) !== '' ? $settings['ocrLanguage'] : $settings['ocrLanguageDefault'],
             'tesseractPath' => $settings['tesseractPath'],
             'pdfToTextPath' => $settings['pdfToTextPath'],
             'timeout' => $settings['aiTimeout'],
         ];
+    }
+
+    /** E.g. 'deu+eng' for German, 'eng' for English, 'ita+eng' for Italian. */
+    private function defaultOcrLanguage(string $userId): string {
+        $language = (string)$this->config->getUserValue($userId, 'core', 'lang', '');
+        if ($language === '') {
+            $language = (string)$this->config->getSystemValue('default_language', 'en');
+        }
+        $primary = strtolower(preg_split('/[-_]/', $language)[0] ?? 'en');
+        $pack = self::TESSERACT_LANGUAGES[$primary] ?? 'eng';
+        if ($primary === 'zh' && preg_match('/^zh[-_](tw|hk|hant)/i', $language)) {
+            $pack = 'chi_tra';
+        }
+        return $pack === 'eng' ? 'eng' : $pack . '+eng';
     }
 
     private function secret(string $userId, string $key): string {

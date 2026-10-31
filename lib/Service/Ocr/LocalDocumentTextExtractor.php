@@ -21,7 +21,7 @@ final class LocalDocumentTextExtractor implements DocumentTextExtractorInterface
         }
         if (str_starts_with($mimeType, 'image/')) {
             $binary = $this->binary((string)($config['tesseractPath'] ?? 'tesseract'));
-            $language = preg_replace('/[^a-zA-Z0-9_+\-]/', '', (string)($config['language'] ?? 'ita+eng')) ?: 'eng';
+            $language = preg_replace('/[^a-zA-Z0-9_+\-]/', '', (string)($config['language'] ?? 'eng')) ?: 'eng';
             return $this->run([$binary, $path, 'stdout', '-l', $language]);
         }
         if (str_starts_with($mimeType, 'text/') || preg_match('/\.(?:txt|md|markdown|html?)$/i', $originalName) === 1) {
