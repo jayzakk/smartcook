@@ -57,7 +57,7 @@ final class SmartCookWidget implements IAPIWidgetV2, IButtonWidget, IIconWidget 
         $items = array_map(function (array $recipe): WidgetItem {
             $totalTime = (int)($recipe['totalTime'] ?? 0);
             $subtitle = $totalTime > 0
-                ? $this->l10n->t('Total time') . ': ' . $totalTime . ' min'
+                ? $this->l10n->t('Total time') . ': ' . $totalTime . ' ' . $this->l10n->t('min')
                 : $this->l10n->t('Recipe');
 
             return new WidgetItem(

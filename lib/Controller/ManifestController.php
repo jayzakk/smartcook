@@ -10,11 +10,12 @@ use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 
 final class ManifestController extends Controller {
-    public function __construct(IRequest $request, private IURLGenerator $urlGenerator) {
+    public function __construct(IRequest $request, private IURLGenerator $urlGenerator, private IL10N $l10n) {
         parent::__construct(Application::APP_ID, $request);
     }
 
@@ -26,7 +27,7 @@ final class ManifestController extends Controller {
             'id' => 'smartcook',
             'name' => 'SmartCook',
             'short_name' => 'SmartCook',
-            'description' => 'Gestione intelligente delle ricette',
+            'description' => $this->l10n->t('Recipe intelligence'),
             'start_url' => $this->urlGenerator->linkToRoute('smartcook.page.index'),
             'scope' => $this->urlGenerator->linkToRoute('smartcook.page.index'),
             'display' => 'standalone',
