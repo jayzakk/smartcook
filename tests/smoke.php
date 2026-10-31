@@ -55,6 +55,12 @@ $expectSame('5', $difficulty->normalize('Molto difficile'), 'Very difficult diff
 $refinementPrompt = (new AiPromptFactory())->refinement(['title' => 'Pasta', 'ingredients' => [['name' => 'Pasta']], 'steps' => []], 'it');
 $expect(str_contains($refinementPrompt, '"steps"'), 'AI refinement schema includes procedure proposal');
 $expect(str_contains($refinementPrompt, 'has no non-empty procedure'), 'AI refinement limits procedure generation to missing procedures');
+$planPrompt = (new AiPromptFactory())->mealPlan([['id' => 1, 'title' => 'Pasta']], '2026-11-02', '2026-11-08', ['prompt' => '', 'dietary' => 'vegetarian', 'cookingTime' => 30, 'servings' => 2]);
+$expect(str_contains($planPrompt, 'Plan a varied, realistic week using only the available recipes.'), 'Meal plan prompt falls back to the default instruction');
+$expect(str_contains($planPrompt, 'from 2026-11-02 to 2026-11-08') && str_contains($planPrompt, '"meals"'), 'Meal plan prompt includes the range and the JSON shape');
+$expect(str_contains($planPrompt, 'MAXIMUM COOKING TIME (MINUTES): 30') && str_contains($planPrompt, 'SERVINGS: 2'), 'Meal plan prompt includes the limits');
+$customPlanPrompt = (new AiPromptFactory())->mealPlan([], '2026-11-02', '2026-11-08', ['prompt' => 'Only soups', 'dietary' => '', 'cookingTime' => 60, 'servings' => 2]);
+$expect(str_starts_with($customPlanPrompt, 'Only soups'), 'Custom planner prompt replaces the default instruction');
 
 $ingredient = $ingredientParser->parse('2 ½ tazze farina, setacciata');
 $expectSame('farina', $ingredient['name'], 'Ingredient name');
