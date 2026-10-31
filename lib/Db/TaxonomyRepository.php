@@ -13,6 +13,7 @@ final class TaxonomyRepository extends AbstractRepository {
         'tags' => ['smartcook_tags', 'smartcook_r_tags', 'tag_id'],
         'categories' => ['smartcook_cats', 'smartcook_r_cats', 'category_id'],
         'tools' => ['smartcook_tools', 'smartcook_r_tools', 'tool_id'],
+        'ingredients' => ['smartcook_ingr', 'smartcook_r_ingr', 'ingredient_id'],
     ];
     private const VALUE_KINDS = [
         'cuisine' => 'cuisine', 'mealType' => 'meal_type',
@@ -227,6 +228,19 @@ final class TaxonomyRepository extends AbstractRepository {
     }
 
     /** @return array<string, mixed> */
+    public function updateIngredient(string $userId, int $id, ?string $category, array $substitutes): array {
+        $qb = $this->db->getQueryBuilder();
+        $qb->update('smartcook_ingr')
+            ->set('category', $qb->createNamedParameter($this->nullString($category)))
+            ->set('substitutes', $qb->createNamedParameter($this->encode($substitutes)))
+            ->where($qb->expr()->eq('id', $qb->createNamedParameter($id)))
+            ->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+        $qb->executeStatement();
+        $row = $this->requireNamedForUser('smartcook_ingr', $userId, $id);
+        return $this->mapNamed($row);
+    }
+
+    /** @return array<string, mixed> */
     public function addManaged(string $userId, string $kind, string $name): array {
         $name = $this->normalizer->capitalizeLabel($name);
         $normalized = $this->normalizer->normalizeName($name);
@@ -358,7 +372,11 @@ final class TaxonomyRepository extends AbstractRepository {
             'norm_name' => $normalized,
             'created_at' => time(),
         ];
-        if ($table === 'smartcook_tools') {
+        if ($table === 'smartcook_ingr') {
+            $row['category'] = $this->nullString($data['category'] ?? null);
+            $row['allergens'] = $this->encode($data['allergens'] ?? []);
+            $row['substitutes'] = $this->encode($data['substitutes'] ?? []);
+        } elseif ($table === 'smartcook_tools') {
             $row['category'] = $this->nullString($data['category'] ?? null);
         } else {
             $row['color'] = $this->nullString($data['color'] ?? null);
