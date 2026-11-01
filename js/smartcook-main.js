@@ -275,6 +275,7 @@ const apiMessagePatterns = [
     [/^Document extraction failed: ([\s\S]*)$/, 'Document extraction failed: {details}', ['details']],
     [/^No suitable image was found with (.+)$/, 'No suitable image was found with {provider}', ['provider']],
     [/^AI extraction failed: ([\s\S]*)$/, 'AI extraction failed: {details}', ['details'], [0]],
+    [/^The AI service returned HTTP (\d+)$/, 'The AI service returned HTTP {code}', ['code']],
     [/^(\S+) returned HTTP (\d+)$/, '{provider} returned HTTP {code}', ['provider', 'code']],
     [/^(\S+) returned invalid JSON$/, '{provider} returned invalid JSON', ['provider']],
     [/^(\S+) returned an unexpected response$/, '{provider} returned an unexpected response', ['provider']],
