@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace OCA\SmartCook\Db;
 
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCA\SmartCook\Service\HouseholdService;
 use OCP\IDBConnection;
 
 final class PlannerRepository extends AbstractRepository {
-    public function __construct(IDBConnection $db) {
-        parent::__construct($db);
+    public function __construct(IDBConnection $db, HouseholdService $household) {
+        parent::__construct($db, $household);
     }
 
     /** @return list<array<string, mixed>> */
@@ -17,7 +18,7 @@ final class PlannerRepository extends AbstractRepository {
         $qb = $this->db->getQueryBuilder();
         $qb->select('m.*', 'r.title', 'r.image_path')->from('smartcook_meals', 'm')
             ->innerJoin('m', 'smartcook_recipes', 'r', $qb->expr()->eq('m.recipe_id', 'r.id'))
-            ->where($qb->expr()->eq('m.user_id', $qb->createNamedParameter($userId)))
+            ->where($this->ownedBy($qb, 'm.user_id', $userId))
             ->andWhere($qb->expr()->gte('m.meal_date', $qb->createNamedParameter($from)))
             ->andWhere($qb->expr()->lte('m.meal_date', $qb->createNamedParameter($to)))
             ->orderBy('m.meal_date', 'ASC')
@@ -69,7 +70,7 @@ final class PlannerRepository extends AbstractRepository {
         $qb = $this->db->getQueryBuilder();
         $qb->delete('smartcook_meals')
             ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-            ->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->andWhere($this->ownedBy($qb, 'user_id', $userId))
             ->executeStatement();
     }
 
@@ -78,7 +79,7 @@ final class PlannerRepository extends AbstractRepository {
         $qb->select('m.*', 'r.title', 'r.image_path')->from('smartcook_meals', 'm')
             ->innerJoin('m', 'smartcook_recipes', 'r', $qb->expr()->eq('m.recipe_id', 'r.id'))
             ->where($qb->expr()->eq('m.id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-            ->andWhere($qb->expr()->eq('m.user_id', $qb->createNamedParameter($userId)))
+            ->andWhere($this->ownedBy($qb, 'm.user_id', $userId))
             ->setMaxResults(1);
         $row = $this->fetchOne($qb);
         return $row === null ? null : [

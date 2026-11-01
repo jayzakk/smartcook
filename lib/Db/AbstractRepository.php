@@ -4,11 +4,20 @@ declare(strict_types=1);
 
 namespace OCA\SmartCook\Db;
 
+use OCA\SmartCook\Service\HouseholdService;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
 abstract class AbstractRepository {
-    public function __construct(protected IDBConnection $db) {
+    public function __construct(protected IDBConnection $db, protected HouseholdService $household) {
+    }
+
+    /** Rows of the user and of everybody in the user's household. */
+    protected function ownedBy(IQueryBuilder $qb, string $column, string $userId): string {
+        $peers = $this->household->peersOf($userId);
+        return count($peers) === 1
+            ? (string)$qb->expr()->eq($column, $qb->createNamedParameter($userId))
+            : (string)$qb->expr()->in($column, $qb->createNamedParameter($peers, IQueryBuilder::PARAM_STR_ARRAY));
     }
 
     protected function insert(string $table, array $data): int {

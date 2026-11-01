@@ -64,7 +64,7 @@ final class CoverImageSearchService {
         if (mb_strlen($title) > 255) {
             throw new ValidationException('The image search text is too long');
         }
-        $settings = $this->settings->get((string)$recipe['ownerId'], true);
+        $settings = $this->settings->get($this->userContext->userId(), true);
         return $this->findImageCandidates($title, $settings, max(1, min(10, $page)));
     }
 
@@ -76,7 +76,7 @@ final class CoverImageSearchService {
             throw new ValidationException('This recipe already has a cover image');
         }
         if ($unsplashDownloadUrl !== '') {
-            $this->trackUnsplashDownload($unsplashDownloadUrl, trim((string)($this->settings->get((string)$recipe['ownerId'], true)['unsplashAccessKey'] ?? '')));
+            $this->trackUnsplashDownload($unsplashDownloadUrl, trim((string)($this->settings->get($this->userContext->userId(), true)['unsplashAccessKey'] ?? '')));
         }
         $download = $this->fetcher->fetch($url, self::MAX_IMAGE_BYTES);
         $mime = mb_strtolower(trim(explode(';', $download['contentType'], 2)[0]));

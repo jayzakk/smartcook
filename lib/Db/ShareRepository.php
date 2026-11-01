@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace OCA\SmartCook\Db;
 
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCA\SmartCook\Service\HouseholdService;
 use OCP\IDBConnection;
 
 final class ShareRepository extends AbstractRepository {
     public const PERMISSION_READ = 1;
     public const PERMISSION_UPDATE = 2;
 
-    public function __construct(IDBConnection $db) {
-        parent::__construct($db);
+    public function __construct(IDBConnection $db, HouseholdService $household) {
+        parent::__construct($db, $household);
     }
 
     /** @return list<array<string, mixed>> */

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace OCA\SmartCook\Db;
 
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCA\SmartCook\Service\HouseholdService;
 use OCP\IDBConnection;
 
 final class ImportRepository extends AbstractRepository {
-    public function __construct(IDBConnection $db) {
-        parent::__construct($db);
+    public function __construct(IDBConnection $db, HouseholdService $household) {
+        parent::__construct($db, $household);
     }
 
     public function createJob(string $userId, string $kind, ?string $sourceRef, bool $useAi, ?string $provider, array $payload): array {
@@ -34,7 +35,7 @@ final class ImportRepository extends AbstractRepository {
     public function listForUser(string $userId, int $limit = 50): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')->from('smartcook_imports')
-            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->where($this->ownedBy($qb, 'user_id', $userId))
             ->orderBy('created_at', 'DESC')
             ->setMaxResults(max(1, min(200, $limit)));
         return array_map(fn (array $row): array => $this->map($row), $this->fetchAll($qb));
@@ -45,7 +46,7 @@ final class ImportRepository extends AbstractRepository {
         $qb->select('*')->from('smartcook_imports')
             ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)));
         if ($userId !== null) {
-            $qb->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+            $qb->andWhere($this->ownedBy($qb, 'user_id', $userId));
         }
         $qb->setMaxResults(1);
         $row = $this->fetchOne($qb);
@@ -77,7 +78,7 @@ final class ImportRepository extends AbstractRepository {
         $qb = $this->db->getQueryBuilder();
         return $qb->delete('smartcook_imports')
             ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-            ->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->andWhere($this->ownedBy($qb, 'user_id', $userId))
             ->executeStatement() > 0;
     }
 

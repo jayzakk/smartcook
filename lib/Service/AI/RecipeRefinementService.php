@@ -9,6 +9,7 @@ use OCA\SmartCook\Db\TaxonomyRepository;
 use OCA\SmartCook\Service\CoverImageSearchService;
 use OCA\SmartCook\Service\RecipeAccessService;
 use OCA\SmartCook\Service\RecipeService;
+use OCA\SmartCook\Service\UserContext;
 
 final class RecipeRefinementService {
     private const FIELDS = ['title', 'subtitle', 'description', 'author', 'sourceName', 'sourceUrl', 'difficulty', 'cuisine', 'mealType', 'cookingMethod', 'season', 'calories', 'nutrition', 'steps', 'tools', 'tags', 'categories'];
@@ -21,6 +22,7 @@ final class RecipeRefinementService {
         private RecipeService $recipes,
         private CoverImageSearchService $covers,
         private TaxonomyRepository $taxonomy,
+        private UserContext $userContext,
     ) {
     }
 
@@ -40,8 +42,10 @@ final class RecipeRefinementService {
     /** @return array<string, mixed> */
     public function analyzeOne(int $id): array {
         $recipe = $this->access->editable($id);
-        $taxonomy = $this->taxonomy->listForUser((string)$recipe['ownerId']);
-        $analysis = $this->ai->refine((string)$recipe['ownerId'], $recipe, (string)($recipe['language'] ?? 'it'), $taxonomy);
+        // The person who asks uses their own AI settings and vocabulary, also for the recipe of a household member.
+        $userId = $this->userContext->userId();
+        $taxonomy = $this->taxonomy->listForUser($userId);
+        $analysis = $this->ai->refine($userId, $recipe, (string)($recipe['language'] ?? 'it'), $taxonomy);
         $analysis = $this->taxonomy->restrictRecipeClassifications($analysis, $taxonomy);
         $clearFields = array_values(array_intersect(self::CLEARABLE_FIELDS, array_filter(
             (array)($analysis['clearFields'] ?? []),

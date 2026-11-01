@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace OCA\SmartCook\Db;
 
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCA\SmartCook\Service\HouseholdService;
 use OCP\IDBConnection;
 
 final class ShoppingRepository extends AbstractRepository {
-    public function __construct(IDBConnection $db) {
-        parent::__construct($db);
+    public function __construct(IDBConnection $db, HouseholdService $household) {
+        parent::__construct($db, $household);
     }
 
     /** @param list<array<string, mixed>> $items @param array<string, mixed> $source */
@@ -52,7 +53,7 @@ final class ShoppingRepository extends AbstractRepository {
     public function listLists(string $userId): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')->from('smartcook_shop_lists')
-            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->where($this->ownedBy($qb, 'user_id', $userId))
             ->orderBy('updated_at', 'DESC');
         $rows = $this->fetchAll($qb);
         $counts = $this->itemCounts(array_map(fn (array $row): int => (int)$row['id'], $rows));
@@ -89,7 +90,7 @@ final class ShoppingRepository extends AbstractRepository {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')->from('smartcook_shop_lists')
             ->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-            ->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->andWhere($this->ownedBy($qb, 'user_id', $userId))
             ->setMaxResults(1);
         $row = $this->fetchOne($qb);
         if ($row === null) {

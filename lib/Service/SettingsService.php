@@ -38,6 +38,7 @@ final class SettingsService {
         'plannerPreferences' => '',
         'plannerCookingTime' => '60',
         'plannerServings' => '2',
+        'household' => '',
         'ocrProvider' => 'disabled',
         'ocrEndpoint' => '',
         'ocrLanguage' => '',
@@ -48,7 +49,7 @@ final class SettingsService {
         'coverImageProvider' => 'google',
     ];
 
-    public function __construct(private IConfig $config, private ICrypto $crypto) {
+    public function __construct(private IConfig $config, private ICrypto $crypto, private HouseholdService $household) {
     }
 
     /** @return array<string, mixed> */
@@ -66,6 +67,9 @@ final class SettingsService {
         if (trim((string)$result['ocrLanguage']) === self::LEGACY_OCR_LANGUAGE) {
             $result['ocrLanguage'] = '';
         }
+        // The household only counts while the person is still a member of that group.
+        $result['household'] = $this->household->groupsOf($userId);
+        $result['householdUnavailable'] = array_values(array_diff($this->household->chosenGroups($userId), $result['household']));
         $result['aiTemperature'] = (float)$result['aiTemperature'];
         $result['aiTimeout'] = (int)$result['aiTimeout'];
         $result['plannerCookingTime'] = (int)$result['plannerCookingTime'];
@@ -103,6 +107,9 @@ final class SettingsService {
                 if ($value !== 'auto' && !preg_match('/^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})*$/', $value)) {
                     continue;
                 }
+            }
+            if ($key === 'household') {
+                $value = $this->household->validate($userId, is_array($value) ? $value : (string)$value);
             }
             if ($key === 'aiProvider' && !in_array($value, ['disabled', 'nextcloud', 'openai', 'openrouter', 'ollama', 'localai', 'mistral', 'anthropic', 'gemini', 'custom'], true)) {
                 continue;

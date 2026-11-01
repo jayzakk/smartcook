@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace OCA\SmartCook\Db;
 
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCA\SmartCook\Service\HouseholdService;
 use OCP\IDBConnection;
 
 final class RecipeRepository extends AbstractRepository {
-    public function __construct(IDBConnection $db, private TaxonomyRepository $taxonomy) {
-        parent::__construct($db);
+    public function __construct(IDBConnection $db, HouseholdService $household, private TaxonomyRepository $taxonomy) {
+        parent::__construct($db, $household);
     }
 
     /**
@@ -21,7 +22,7 @@ final class RecipeRepository extends AbstractRepository {
         $qb = $this->db->getQueryBuilder();
         $qb->select('r.*')->from('smartcook_recipes', 'r');
 
-        $ownerExpression = $qb->expr()->eq('r.user_id', $qb->createNamedParameter($userId));
+        $ownerExpression = $this->ownedBy($qb, 'r.user_id', $userId);
         if ($sharedRecipeIds !== []) {
             $params = array_map(
                 fn (int $id): mixed => $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT),
@@ -118,7 +119,7 @@ final class RecipeRepository extends AbstractRepository {
     public function listMissingCoverIds(string $userId): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('id')->from('smartcook_recipes')
-            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->where($this->ownedBy($qb, 'user_id', $userId))
             ->andWhere($qb->expr()->orX(
                 $qb->expr()->isNull('image_path'),
                 $qb->expr()->eq('image_path', $qb->createNamedParameter('')),

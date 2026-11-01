@@ -14,6 +14,7 @@ final class RecipeAccessService {
         private RecipeRepository $recipes,
         private ShareRepository $shares,
         private UserContext $userContext,
+        private HouseholdService $household,
     ) {
     }
 
@@ -28,7 +29,7 @@ final class RecipeAccessService {
         if ($recipe === null) {
             throw new NotFoundException('Recipe not found');
         }
-        if ($recipe['ownerId'] === $this->userContext->userId()) {
+        if ($this->household->sameHousehold((string)$recipe['ownerId'], $this->userContext->userId())) {
             return $recipe;
         }
         $permission = $this->shares->permissions($recipeId, $this->userContext->userId(), $this->userContext->groupIds());
@@ -41,7 +42,7 @@ final class RecipeAccessService {
     /** @return array<string, mixed> */
     public function editable(int $recipeId): array {
         $recipe = $this->readable($recipeId);
-        if ($recipe['ownerId'] === $this->userContext->userId()) {
+        if ($this->household->sameHousehold((string)$recipe['ownerId'], $this->userContext->userId())) {
             return $recipe;
         }
         $permission = $this->shares->permissions($recipeId, $this->userContext->userId(), $this->userContext->groupIds());
@@ -54,7 +55,7 @@ final class RecipeAccessService {
     /** @return array<string, mixed> */
     public function owned(int $recipeId): array {
         $recipe = $this->readable($recipeId);
-        if ($recipe['ownerId'] !== $this->userContext->userId()) {
+        if (!$this->household->sameHousehold((string)$recipe['ownerId'], $this->userContext->userId())) {
             throw new ForbiddenException('Only the owner can perform this operation');
         }
         return $recipe;

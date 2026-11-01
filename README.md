@@ -1,7 +1,7 @@
 # SmartCook – integration branch
 
 Fork build of [gabryk91/smartcook](https://github.com/gabryk91/smartcook): upstream `main` + all open PRs + our own patches.
-Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.196**. Current: **1.0.196-10**.
+Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.196**. Current: **1.0.196-13**.
 
 ## Patches in this branch
 
@@ -28,6 +28,7 @@ Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.
 | AI provider errors – `ai-http-errors` | 1.0.196-6 | retry on 429/502/503/504 (Retry-After), readable translated errors instead of raw Guzzle message / "unexpected error", API key no longer in logs or messages |
 | Ingredient units de/fr – `ingredient-units` | 1.0.196-7 (fr: -8, labels: -9) | parser knows German and French units (fr: cuillère à soupe/café, pincée, gousse, tranche, boîte, `de`/`d'` after the unit); ingredient text editor shows translated unit labels, all en/it/fr/de labels map back (q.b., nach Geschmack, au goût); German: parser knows German units (TL, EL, Prise, Zehe, Stück, Kopf, Scheibe, Bund, Dose, Päckchen, …) with canonical codes, `/n` and `(n)` plural markers, `Zitrone(n)` / `Ei(er)` no longer become notes, `Knoblauchzehe(n)` → clove + Knoblauch, smoke tests |
 | Empty quantity in import editor – `import-empty-quantity` | 1.0.196-10 | empty quantity cell in the ingredient text editor is no quantity instead of `0` ("0 Öl"); fractions and decimal commas typed there are kept |
+| Household – `household` | 1.0.196-11 (limit: -12, several groups: -13) | everybody picks one or several of their own Nextcloud groups as household (SmartCook settings); members of the same household see and edit each other's recipes, planner and shopping lists; entries stay owned by their creator (leaving or switching hides them again); AI/cover settings stay personal; taxonomy lists merged by name; admin form (Additional settings) limits the selectable groups (empty = all), a choice that is no longer allowed hides the shared data but is kept |
 
 ## Maintaining this list
 

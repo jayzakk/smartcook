@@ -8,6 +8,7 @@ use OCA\SmartCook\BackgroundJob\CleanupImportsJob;
 use OCA\SmartCook\Dashboard\SmartCookWidget;
 use OCA\SmartCook\Notification\Notifier;
 use OCA\SmartCook\Search\RecipeSearchProvider;
+use OCA\SmartCook\Settings\HouseholdAdminSettings;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -25,6 +26,7 @@ final class Application extends App implements IBootstrap {
         $context->registerDashboardWidget(SmartCookWidget::class);
         $context->registerSearchProvider(RecipeSearchProvider::class);
         $context->registerNotifierService(Notifier::class);
+        $context->registerDeclarativeSettings(HouseholdAdminSettings::class);
     }
 
     public function boot(IBootContext $context): void {

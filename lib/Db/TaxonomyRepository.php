@@ -6,6 +6,7 @@ namespace OCA\SmartCook\Db;
 
 use OCA\SmartCook\Service\TextNormalizer;
 use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCA\SmartCook\Service\HouseholdService;
 use OCP\IDBConnection;
 
 final class TaxonomyRepository extends AbstractRepository {
@@ -19,8 +20,8 @@ final class TaxonomyRepository extends AbstractRepository {
         'cuisine' => 'cuisine', 'mealType' => 'meal_type',
         'cookingMethod' => 'cook_method', 'season' => 'season',
     ];
-    public function __construct(IDBConnection $db, private TextNormalizer $normalizer) {
-        parent::__construct($db);
+    public function __construct(IDBConnection $db, HouseholdService $household, private TextNormalizer $normalizer) {
+        parent::__construct($db, $household);
     }
 
     /** @param list<array<string, mixed>> $ingredients */
@@ -399,7 +400,7 @@ final class TaxonomyRepository extends AbstractRepository {
         $values = [];
         $qb = $this->db->getQueryBuilder();
         $qb->select('id', 'name', 'norm_name')->from('smartcook_taxonomy')
-            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->where($this->ownedBy($qb, 'user_id', $userId))
             ->andWhere($qb->expr()->eq('kind', $qb->createNamedParameter($kind)))
             ->orderBy('name', 'ASC');
         foreach ($this->fetchAll($qb) as $row) {
@@ -407,7 +408,7 @@ final class TaxonomyRepository extends AbstractRepository {
         }
         $qb = $this->db->getQueryBuilder();
         $qb->select($column)->from('smartcook_recipes')
-            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->where($this->ownedBy($qb, 'user_id', $userId))
             ->andWhere($qb->expr()->isNotNull($column));
         foreach ($this->fetchAll($qb) as $row) {
             $name = trim((string)$row[$column]);
@@ -568,9 +569,18 @@ final class TaxonomyRepository extends AbstractRepository {
     private function listNamedTable(string $table, string $userId): array {
         $qb = $this->db->getQueryBuilder();
         $qb->select('*')->from($table)
-            ->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+            ->where($this->ownedBy($qb, 'user_id', $userId))
             ->orderBy('name', 'ASC');
-        return array_map(fn (array $row): array => $this->mapNamed($row), $this->fetchAll($qb));
+        // Household members each have their own entry for the same name: show every name once, the user's own entry first.
+        $rows = $this->fetchAll($qb);
+        usort($rows, static fn (array $a, array $b): int => ((string)$b['user_id'] === $userId) <=> ((string)$a['user_id'] === $userId));
+        $unique = [];
+        foreach ($rows as $row) {
+            $unique[(string)$row['norm_name']] ??= $row;
+        }
+        $unique = array_values($unique);
+        usort($unique, static fn (array $a, array $b): int => strcasecmp((string)$a['name'], (string)$b['name']));
+        return array_map(fn (array $row): array => $this->mapNamed($row), $unique);
     }
 
     /** @return array<string, mixed> */
