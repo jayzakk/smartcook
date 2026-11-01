@@ -50,6 +50,16 @@ final class TextNormalizer {
         'knollen' => 'Knolle', 'knolle' => 'Knolle', 'becher' => 'Becher', 'beutel' => 'Beutel',
         'wuerfel' => 'Würfel', 'msp' => 'Msp.', 'messerspitze' => 'Msp.', 'messerspitzen' => 'Msp.',
         'handvoll' => 'Handvoll', 'schuss' => 'Schuss', 'spritzer' => 'Spritzer', 'tropfen' => 'Tropfen',
+        // French; keys after normalizeUnit() has written out accents, "c. à soupe" becomes "c a soupe".
+        'cuillere a soupe' => 'tbsp', 'cuilleres a soupe' => 'tbsp', 'c a soupe' => 'tbsp', 'c a s' => 'tbsp', 'cas' => 'tbsp',
+        'cuillere a cafe' => 'tsp', 'cuilleres a cafe' => 'tsp', 'c a cafe' => 'tsp', 'c a c' => 'tsp', 'cac' => 'tsp',
+        'pincee' => 'pinch', 'pincees' => 'pinch', 'gousse' => 'clove', 'gousses' => 'clove',
+        'morceau' => 'pc', 'morceaux' => 'pc', 'gramme' => 'g', 'grammes' => 'g', 'litre' => 'l', 'litres' => 'l',
+        'tranche' => 'Tranche', 'tranches' => 'Tranche', 'boite' => 'Boîte', 'boites' => 'Boîte',
+        'sachet' => 'Sachet', 'sachets' => 'Sachet', 'tete' => 'Tête', 'tetes' => 'Tête',
+        'botte' => 'Botte', 'bottes' => 'Botte', 'brin' => 'Brin', 'brins' => 'Brin',
+        'feuille' => 'Feuille', 'feuilles' => 'Feuille', 'tige' => 'Tige', 'tiges' => 'Tige',
+        'verre' => 'Verre', 'verres' => 'Verre', 'poignee' => 'Poignée', 'poignees' => 'Poignée',
     ];
 
     public function normalizeName(string $value): string {
@@ -78,8 +88,8 @@ final class TextNormalizer {
         if ($unit === null || trim($unit) === '') {
             return null;
         }
-        // Write umlauts out first: transliteration to ASCII depends on the server locale.
-        $normalized = $this->normalizeName(strtr(mb_strtolower(trim($unit)), ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']));
+        // Write umlauts and accents out first: transliteration to ASCII depends on the server locale.
+        $normalized = $this->normalizeName(strtr(mb_strtolower(trim($unit)), ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e', 'à' => 'a', 'â' => 'a', 'ç' => 'c', 'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'û' => 'u', 'ù' => 'u']));
         return self::UNIT_ALIASES[$normalized] ?? trim($unit);
     }
 

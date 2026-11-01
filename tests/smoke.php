@@ -78,6 +78,12 @@ foreach ([
     ['1 Ei(er), roh', null, 'Ei', 'roh'],
     ['4 Sardellenfilet(s), aus dem Glas', null, 'Sardellenfilet', 'aus dem Glas'],
     ['1 Kopfsalat', null, 'Kopfsalat', null],
+    ['2 cuillères à soupe d’huile d’olive', 'tbsp', 'huile d’olive', null],
+    ['1 c. à café de sel', 'tsp', 'sel', null],
+    ['3 gousses d\'ail', 'clove', 'ail', null],
+    ['1 pincée de sel', 'pinch', 'sel', null],
+    ['2 tranches de pain', 'Tranche', 'pain', null],
+    ['3 œufs', null, 'œufs', null],
 ] as [$line, $unit, $name, $notes]) {
     $german = $ingredientParser->parse($line);
     $expectSame([$unit, $name, $notes], [$german['unit'], $german['name'], $german['notes']], 'German ingredient: ' . $line);

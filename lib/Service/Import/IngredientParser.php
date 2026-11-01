@@ -19,6 +19,11 @@ final class IngredientParser {
         'bund', 'bünde', 'päckchen', 'pck', 'packung', 'packungen', 'pkg', 'glas', 'gläser', 'flasche', 'flaschen',
         'zweig', 'zweige', 'stange', 'stangen', 'stiel', 'stiele', 'blatt', 'blätter', 'knolle', 'knollen', 'becher',
         'beutel', 'würfel', 'msp', 'messerspitze', 'messerspitzen', 'handvoll', 'schuss', 'spritzer', 'tropfen',
+        // French
+        'cuillère à soupe', 'cuillères à soupe', 'c. à soupe', 'c. à s.', 'càs', 'cuillère à café', 'cuillères à café',
+        'c. à café', 'c. à c.', 'càc', 'pincée', 'pincées', 'gousse', 'gousses', 'tranche', 'tranches', 'boîte', 'boîtes',
+        'sachet', 'sachets', 'tête', 'têtes', 'botte', 'bottes', 'brin', 'brins', 'feuille', 'feuilles', 'tige', 'tiges',
+        'morceau', 'morceaux', 'pièce', 'pièces', 'gramme', 'grammes', 'litre', 'litres', 'verre', 'verres', 'poignée', 'poignées',
     ];
     /** Optional plural written behind a unit or name: "Scheibe/n", "Dose(n)", "Ei(er)". */
     private const PLURAL_MARKER = '(?:\\/\\p{L}{1,3}|\\(\\p{L}{1,3}\\))';
@@ -44,11 +49,11 @@ final class IngredientParser {
         $unit = null;
         $name = $line;
 
-        if (preg_match('/^(' . $quantityPattern . ')\s*(?:x\s*)?(?:(' . $unitPattern . ')' . self::PLURAL_MARKER . '?\.?(?![\p{L}\p{N}]))?\s*(?:di\s+|of\s+)?(.+)$/iu', $line, $m) === 1) {
+        if (preg_match('/^(' . $quantityPattern . ')\s*(?:x\s*)?(?:(' . $unitPattern . ')' . self::PLURAL_MARKER . '?\.?(?![\p{L}\p{N}]))?\s*(?:di\s+|of\s+|de\s+|d[\x27’]\s*)?(.+)$/iu', $line, $m) === 1) {
             $quantity = trim($m[1]);
             $unit = isset($m[2]) && $m[2] !== '' ? $this->normalizer->normalizeUnit($m[2]) : null;
             $name = trim($m[3]);
-        } elseif (preg_match('/^(' . $unitPattern . ')' . self::PLURAL_MARKER . '?\.?\s+(?:di\s+|of\s+)?(.+)$/iu', $line, $m) === 1) {
+        } elseif (preg_match('/^(' . $unitPattern . ')' . self::PLURAL_MARKER . '?\.?\s+(?:di\s+|of\s+|de\s+|d[\x27’]\s*)?(.+)$/iu', $line, $m) === 1) {
             $unit = $this->normalizer->normalizeUnit($m[1]);
             $name = trim($m[2]);
         } elseif (preg_match('/^(.+?)\s+(' . $quantityPattern . ')\s+(' . $unitPattern . ')' . self::PLURAL_MARKER . '?\.?(?![\p{L}\p{N}])(?:\s+(.+))?$/iu', $line, $m) === 1) {
