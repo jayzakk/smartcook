@@ -1,7 +1,7 @@
 # SmartCook – integration branch
 
 Fork build of [gabryk91/smartcook](https://github.com/gabryk91/smartcook): upstream `main` + all open PRs + our own patches.
-Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.196**. Current: **1.0.196-5**.
+Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.196**. Current: **1.0.196-6**.
 
 ## Patches in this branch
 
@@ -25,6 +25,7 @@ Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.
 | AI meal plan prompt – `l10n-ai-prompts` | 1.0.196-4 | prompt in en/it/fr/de via `IL10N`, default instruction not stored (placeholder), no Italian example |
 | Default language – `language-setting` | 1.0.196-4 | setting was never used; now default for new recipes, import output, assistant; `auto` = Nextcloud language; datalist autocompletion; validation |
 | OCR default language – `ocr-language-default` | 1.0.196-5 | default from Nextcloud language (`deu+eng`, `fra+eng`, …) instead of `ita+eng`; OCR help lists matching packages |
+| AI provider errors – `ai-http-errors` | 1.0.196-6 | retry on 429/502/503/504 (Retry-After), readable translated errors instead of raw Guzzle message / "unexpected error", API key no longer in logs or messages |
 
 ## Maintaining this list
 
