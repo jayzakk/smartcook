@@ -28,7 +28,7 @@ final class NextcloudTaskProvider implements AiProviderInterface {
         if (!$this->manager->hasProviders() || (!array_key_exists(TextToText::ID, $taskTypes) && !array_key_exists(TextToTextChat::ID, $taskTypes))) {
             throw new ImportException('No compatible Nextcloud Assistant provider is available');
         }
-        $prompt = isset($config['assistant']) && is_array($config['assistant']) ? $this->prompts->assistant((string)($config['assistant']['question'] ?? ''), (array)($config['assistant']['recipes'] ?? []), $language) : (isset($config['planner']) && is_array($config['planner']) ? $this->prompts->mealPlan($config['planner']['recipes'] ?? [], (string)($config['planner']['from'] ?? ''), (string)($config['planner']['to'] ?? ''), (array)($config['planner']['preferences'] ?? [])) : (isset($config['refinement']) && is_array($config['refinement']) ? $this->prompts->refinement($config['refinement'], $language, (array)($config['taxonomy'] ?? [])) : $this->prompts->recipe($text, $language, (array)($config['taxonomy'] ?? []))));
+        $prompt = $this->prompts->forRequest($config, $text, $language);
         $task = array_key_exists(TextToText::ID, $taskTypes)
             ? new Task(TextToText::ID, ['input' => $prompt], Application::APP_ID, (string)($config['userId'] ?? ''))
             : new Task(TextToTextChat::ID, ['system_prompt' => 'Follow the user request exactly. Return only the requested JSON object, with no Markdown or commentary.', 'input' => $prompt, 'history' => []], Application::APP_ID, (string)($config['userId'] ?? ''));

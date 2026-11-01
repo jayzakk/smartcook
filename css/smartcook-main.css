@@ -4733,3 +4733,34 @@ select:focus {
 	height: 24px;
 	background: transparent;
 }
+
+/* Translate button in the recipe header (top right of the box with the recipe name). */
+.recipe-view-heading {
+	position: relative;
+}
+
+.recipe-view-heading.has-translate .eyebrow,
+.recipe-view-heading.has-translate h2 {
+	padding-right: 52px;
+}
+
+.recipe-translate-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+}
+
+.recipe-translate-button.active {
+	background: var(--smartcook-accent, var(--color-primary-element));
+	color: var(--smartcook-accent-text, var(--color-primary-element-text));
+}
+
+.import-preview-tools {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 8px;
+}
+
+.editor-top > button[data-translate-editor] {
+	align-self: center;
+}

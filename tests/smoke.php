@@ -198,6 +198,9 @@ $expect(str_contains($instagramCanonicalSource['description'], 'Chips di cipolla
 $expect(!str_contains($instagramCanonicalSource['description'], 'non pertinente'), 'Instagram ignores unrelated preloaded post text');
 
 $ai = (new AiJsonParser())->parse("```json\n{\"title\":\"Torta\",\"ingredients\":[]}\n```");
+$rawBreak = (new AiJsonParser())->parse("{\n  \"title\": \"Zeile 1\nZeile 2\tTab\",\n  \"note\": \"mit \\\"Zitat\\\" und Backslash \\\\\"\n}");
+$expectSame("Zeile 1\nZeile 2\tTab", $rawBreak['title'], 'AI JSON with a raw line break inside a string is accepted');
+$expectSame('mit "Zitat" und Backslash \\', $rawBreak['note'], 'Escapes inside strings stay intact when repairing control characters');
 $expectSame('Torta', $ai['title'], 'AI fenced JSON parsing');
 
 $pdfPath = tempnam(sys_get_temp_dir(), 'smartcook-pdf-');

@@ -52,11 +52,7 @@ final class OpenAiCompatibleProvider implements AiProviderInterface {
             $headers['X-Title'] = 'SmartCook for Nextcloud';
         }
         $temperature = (float)str_replace(',', '.', (string)($config['temperature'] ?? 0.1));
-        $prompt = isset($config['assistant']) && is_array($config['assistant'])
-            ? $this->prompts->assistant((string)($config['assistant']['question'] ?? ''), (array)($config['assistant']['recipes'] ?? []), $language)
-            : (isset($config['planner']) && is_array($config['planner'])
-            ? $this->prompts->mealPlan($config['planner']['recipes'] ?? [], (string)($config['planner']['from'] ?? ''), (string)($config['planner']['to'] ?? ''), (array)($config['planner']['preferences'] ?? []))
-            : (isset($config['refinement']) && is_array($config['refinement']) ? $this->prompts->refinement($config['refinement'], $language, (array)($config['taxonomy'] ?? [])) : $this->prompts->recipe($text, $language, (array)($config['taxonomy'] ?? []))));
+        $prompt = $this->prompts->forRequest($config, $text, $language);
         $payload = $nativeOllama
             ? [
                 'model' => $model,

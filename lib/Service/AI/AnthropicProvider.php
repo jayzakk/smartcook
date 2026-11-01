@@ -33,7 +33,7 @@ final class AnthropicProvider implements AiProviderInterface {
             'model' => $model,
             'max_tokens' => 8192,
             'temperature' => (float)($config['temperature'] ?? 0.1),
-            'messages' => [['role' => 'user', 'content' => isset($config['assistant']) && is_array($config['assistant']) ? $this->prompts->assistant((string)($config['assistant']['question'] ?? ''), (array)($config['assistant']['recipes'] ?? []), $language) : (isset($config['planner']) && is_array($config['planner']) ? $this->prompts->mealPlan($config['planner']['recipes'] ?? [], (string)($config['planner']['from'] ?? ''), (string)($config['planner']['to'] ?? ''), (array)($config['planner']['preferences'] ?? [])) : (isset($config['refinement']) && is_array($config['refinement']) ? $this->prompts->refinement($config['refinement'], $language, (array)($config['taxonomy'] ?? [])) : $this->prompts->recipe($text, $language, (array)($config['taxonomy'] ?? []))))]],
+            'messages' => [['role' => 'user', 'content' => $this->prompts->forRequest($config, $text, $language)]],
         ];
         $response = $this->http->post($endpoint . '/messages', [
             'headers' => ['Content-Type' => 'application/json', 'x-api-key' => $key, 'anthropic-version' => '2023-06-01'],

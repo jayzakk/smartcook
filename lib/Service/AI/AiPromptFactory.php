@@ -22,6 +22,23 @@ final class AiPromptFactory {
         return "You are SmartCook's cookbook assistant. Answer the user's question using only the supplied recipe catalog. You may give practical cooking advice, but never claim that a recipe, ingredient, quantity, allergen, time, or dietary property exists unless it is present in the catalog. When ingredients are available, recommend recipes that use the greatest useful overlap; clearly mention important missing ingredients. Do not invent recipe IDs. Keep the answer concise, helpful, and in {$language}. Return only valid JSON without Markdown using exactly this shape: {$schema}. Include at most 8 recommendations and only recipeId values from the catalog.\n\nUSER QUESTION:\n{$question}\n\nRECIPE CATALOG:\n{$catalog}";
     }
 
+    /** @param array<string, mixed> $content */
+    public function translation(array $content, string $language): string {
+        $json = json_encode($content, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return "Translate the text values of this recipe into the language with the code \"{$language}\" (for example de = German, en = English). Keep the JSON structure exactly: the same keys, and arrays with the same number of items in the same order. Translate names, notes, descriptions and instructions into natural cooking language; do not translate numbers, URLs or proper nouns that have no common translation. Do not add or remove information. Return only valid JSON without Markdown or commentary. Recipe: {$json}";
+    }
+
+    /** Picks the prompt for the request described by the provider config (assistant, planner, translation, refinement or import). */
+    public function forRequest(array $config, string $text, string $language): string {
+        return match (true) {
+            isset($config['assistant']) && is_array($config['assistant']) => $this->assistant((string)($config['assistant']['question'] ?? ''), (array)($config['assistant']['recipes'] ?? []), $language),
+            isset($config['planner']) && is_array($config['planner']) => $this->mealPlan($config['planner']['recipes'] ?? [], (string)($config['planner']['from'] ?? ''), (string)($config['planner']['to'] ?? ''), (array)($config['planner']['preferences'] ?? [])),
+            isset($config['translation']) && is_array($config['translation']) => $this->translation($config['translation'], $language),
+            isset($config['refinement']) && is_array($config['refinement']) => $this->refinement($config['refinement'], $language, (array)($config['taxonomy'] ?? [])),
+            default => $this->recipe($text, $language, (array)($config['taxonomy'] ?? [])),
+        };
+    }
+
     /** @param array<string, mixed> $recipe */
     public function refinement(array $recipe, string $language, array $taxonomy = []): string {
         $recipeJson = json_encode($recipe, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

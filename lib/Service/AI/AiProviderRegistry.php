@@ -33,7 +33,7 @@ final class AiProviderRegistry {
         $config['taxonomy'] = $taxonomy;
         foreach ($this->providers as $provider) {
             if ($provider->supports($providerId)) {
-                return $provider->extractRecipe($text, $language, $config);
+                return $this->call($provider, $text, $language, $config);
             }
         }
         throw new ImportException('Unsupported AI provider: ' . $providerId);
@@ -50,7 +50,24 @@ final class AiProviderRegistry {
         foreach ($this->providers as $provider) {
             if ($provider->supports($providerId)) {
                 $config['planner'] = ['recipes' => $recipes, 'from' => $from, 'to' => $to, 'preferences' => $preferences];
-                return $provider->extractRecipe('', 'it', $config);
+                return $this->call($provider, '', 'it', $config);
+            }
+        }
+        throw new ImportException('Unsupported AI provider: ' . $providerId);
+    }
+
+    /** @param array<string, mixed> $content @return array<string, mixed> */
+    public function translate(string $userId, array $content, string $language): array {
+        $config = $this->settings->ai($userId);
+        $providerId = (string)$config['provider'];
+        if ($providerId === 'disabled') {
+            throw new ImportException('AI translation is disabled');
+        }
+        $config['userId'] = $userId;
+        $config['translation'] = $content;
+        foreach ($this->providers as $provider) {
+            if ($provider->supports($providerId)) {
+                return $this->call($provider, '', $language, $config);
             }
         }
         throw new ImportException('Unsupported AI provider: ' . $providerId);
@@ -68,7 +85,7 @@ final class AiProviderRegistry {
         $config['taxonomy'] = $taxonomy;
         foreach ($this->providers as $provider) {
             if ($provider->supports($providerId)) {
-                return $provider->extractRecipe('', $language, $config);
+                return $this->call($provider, '', $language, $config);
             }
         }
         throw new ImportException('Unsupported AI provider: ' . $providerId);
@@ -85,9 +102,25 @@ final class AiProviderRegistry {
         $config['assistant'] = ['question' => $question, 'recipes' => $recipes];
         foreach ($this->providers as $provider) {
             if ($provider->supports($providerId)) {
-                return $provider->extractRecipe('', $language, $config);
+                return $this->call($provider, '', $language, $config);
             }
         }
         throw new ImportException('Unsupported AI provider: ' . $providerId);
+    }
+
+    /**
+     * Calls the provider; an answer that is not valid JSON is a hiccup of the model, so it gets one more try.
+     *
+     * @param array<string, mixed> $config @return array<string, mixed>
+     */
+    private function call(AiProviderInterface $provider, string $text, string $language, array $config): array {
+        try {
+            return $provider->extractRecipe($text, $language, $config);
+        } catch (ImportException $e) {
+            if ($e->getMessage() !== 'The AI provider did not return valid JSON') {
+                throw $e;
+            }
+            return $provider->extractRecipe($text, $language, $config);
+        }
     }
 }

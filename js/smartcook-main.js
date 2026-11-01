@@ -298,12 +298,47 @@ const defaultLanguage = () => {
     const value = String(languageSetting || '').trim();
     return value && value.toLowerCase() !== 'auto' ? value : (document.documentElement.lang || 'en');
 };
+// The translate buttons only appear when an AI provider is configured.
+let aiTranslateAvailable = false;
+const translatedRecipes = new Map();
+const showingTranslation = new Set();
+const nameOf = (item) => String(item?.name ?? item ?? '').trim();
+async function translateTexts(recipe) {
+    const response = await working(() => request('/recipes/translate', { method: 'POST', json: { recipe, language: defaultLanguage() } }));
+    return response.translation || {};
+}
+// Puts the translated texts into a copy of the recipe; anything the AI did not return stays as it was.
+function applyTranslation(recipe, translation) {
+    const next = { ...recipe };
+    for (const field of ['title', 'subtitle', 'description', 'cuisine', 'mealType', 'cookingMethod', 'season']) {
+        if (translation[field])
+            next[field] = translation[field];
+    }
+    for (const field of ['categories', 'tags', 'tools']) {
+        const names = translation[field];
+        const items = Array.isArray(recipe[field]) ? recipe[field] : [];
+        if (!Array.isArray(names) || names.length !== items.filter(item => nameOf(item)).length)
+            continue;
+        let position = 0;
+        next[field] = items.map(item => nameOf(item) ? (typeof item === 'object' ? { ...item, name: names[position++] } : names[position++]) : item);
+    }
+    for (const [field, keys] of [['ingredients', ['name', 'notes', 'group']], ['steps', ['text']]]) {
+        const items = Array.isArray(recipe[field]) ? recipe[field] : [];
+        const translated = translation[field];
+        if (!Array.isArray(translated) || translated.length !== items.length)
+            continue;
+        next[field] = items.map((item, index) => ({ ...item, ...Object.fromEntries(keys.filter(key => translated[index]?.[key]).map(key => [key, translated[index][key]])) }));
+    }
+    return next;
+}
 async function loadLanguageSetting() {
     if (languageSettingLoaded)
         return;
     languageSettingLoaded = true;
     try {
-        languageSetting = (await request('/settings')).settings?.language ?? 'auto';
+        const settings = (await request('/settings')).settings;
+        languageSetting = settings?.language ?? 'auto';
+        aiTranslateAvailable = !!settings?.aiProvider && settings.aiProvider !== 'disabled';
     }
     catch {
         // Keep 'auto': the interface language is a safe default.
@@ -768,7 +803,7 @@ function recipeIngredientItems(recipe, factor = 1) {
         return `<li><span>${esc(measure)}</span><strong>${esc(item.name)}</strong>${item.optional ? `<em>${esc(tr('Optional'))}</em>` : ''}${item.notes ? `<small>${esc(item.notes)}</small>` : ''}${alternatives.length ? `<small class="recipe-ingredient-alternatives">${esc(tr('Alternatives'))}: ${esc(alternatives.join(' · '))}</small>` : ''}</li>`;
     }).join('');
 }
-function recipeViewer(recipe) {
+function recipeViewer(recipe, viewOptions = {}) {
     const image = recipeImageUrl(recipe.imagePath);
 	const sourceUrl = safeExternalUrl(recipe.sourceUrl);
 	const sourceLabel = String(sourceServiceName(sourceUrl) || recipe.sourceName || '').trim();
@@ -787,7 +822,7 @@ function recipeViewer(recipe) {
         return `<li><span class="recipe-step-number">${index + 1}</span><div><p>${esc(step.text)}</p>${details.length ? `<small>${esc(details.join(' · '))}</small>` : ''}</div></li>`;
     }).join('');
     return `<div class="recipe-view-shell"><article class="recipe-view panel">
-        <header class="recipe-view-header"><div class="recipe-view-image-wrap">${image ? `<img class="recipe-view-image" src="${attr(image)}" alt="">` : `<div class="recipe-view-image image-placeholder" aria-hidden="true"><span>${esc(recipe.title.slice(0, 1).toUpperCase())}</span></div><button class="cover-search-button" data-find-cover type="button" title="${attr(tr('Find cover image'))}" aria-label="${attr(tr('Find cover image'))}">${fa('wand-magic-sparkles')}</button>`}</div><div class="recipe-view-heading"><p class="eyebrow">${esc(categoryLabel)}</p><h2>${esc(recipe.title)}</h2>${recipe.subtitle ? `<p class="recipe-view-subtitle">${esc(recipe.subtitle)}</p>` : ''}${recipe.description ? `<p class="recipe-view-description">${esc(recipe.description)}</p>` : ''}${sourceUrl ? `<div class="recipe-view-actions"><a class="secondary recipe-source-link" href="${attr(sourceUrl)}" target="_blank" rel="noopener noreferrer" title="${attr(tr('Open source'))}">${fa('arrow-up-right-from-square')}${esc(tr('Open source'))}${sourceLabel ? `: ${esc(sourceLabel)}` : ''}</a></div>` : ''}</div></header>
+        <header class="recipe-view-header"><div class="recipe-view-image-wrap">${image ? `<img class="recipe-view-image" src="${attr(image)}" alt="">` : `<div class="recipe-view-image image-placeholder" aria-hidden="true"><span>${esc(recipe.title.slice(0, 1).toUpperCase())}</span></div><button class="cover-search-button" data-find-cover type="button" title="${attr(tr('Find cover image'))}" aria-label="${attr(tr('Find cover image'))}">${fa('wand-magic-sparkles')}</button>`}</div><div class="recipe-view-heading${viewOptions.canTranslate ? ' has-translate' : ''}">${viewOptions.canTranslate ? `<button class="secondary icon-button recipe-translate-button${viewOptions.translated ? ' active' : ''}" data-translate-recipe type="button" aria-pressed="${viewOptions.translated ? 'true' : 'false'}" title="${attr(viewOptions.translated ? tr('Show original') : tr('Translate recipe'))}" aria-label="${attr(viewOptions.translated ? tr('Show original') : tr('Translate recipe'))}">${fa('language')}</button>` : ''}<p class="eyebrow">${esc(categoryLabel)}</p><h2>${esc(recipe.title)}</h2>${recipe.subtitle ? `<p class="recipe-view-subtitle">${esc(recipe.subtitle)}</p>` : ''}${recipe.description ? `<p class="recipe-view-description">${esc(recipe.description)}</p>` : ''}${sourceUrl ? `<div class="recipe-view-actions"><a class="secondary recipe-source-link" href="${attr(sourceUrl)}" target="_blank" rel="noopener noreferrer" title="${attr(tr('Open source'))}">${fa('arrow-up-right-from-square')}${esc(tr('Open source'))}${sourceLabel ? `: ${esc(sourceLabel)}` : ''}</a></div>` : ''}</div></header>
         <div class="recipe-view-meta"><div class="recipe-view-metric recipe-view-servings"><span class="recipe-view-metric-label">${esc(tr('Servings'))}</span><div class="recipe-view-servings-controls"><button class="stepper-btn" data-recipe-servings-step="-1" type="button" aria-label="${attr(tr('Decrease servings'))}"${asNumber(recipe.servings) <= 1 ? ' disabled' : ''}>${fa('minus')}</button><strong data-recipe-servings aria-live="polite">${Math.max(1, asNumber(recipe.servings, 1))}</strong><button class="stepper-btn" data-recipe-servings-step="1" type="button" aria-label="${attr(tr('Increase servings'))}">${fa('plus')}</button></div></div>${calories > 0 ? `<div class="recipe-view-metric recipe-view-calories"><span class="recipe-view-metric-label">${esc(tr('kcal x 1 serving'))}</span><strong>${calories}</strong></div>` : ''}<div class="recipe-view-time-group"><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Preparation'))}</span><strong>${asNumber(recipe.prepTime)} <small>${esc(tr('min'))}</small></strong></div><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Cooking'))}</span><strong>${asNumber(recipe.cookTime)} <small>${esc(tr('min'))}</small></strong></div><div class="recipe-view-metric"><span class="recipe-view-metric-label">${esc(tr('Total'))}</span><strong>${asNumber(recipe.totalTime)} <small>${esc(tr('min'))}</small></strong></div></div></div>
         <div class="recipe-view-content"><section><h3>${esc(tr('Ingredients'))}</h3><ul class="recipe-view-ingredients">${ingredientItems || `<li>${esc(tr('No data yet'))}</li>`}</ul></section><section><h3>${esc(tr('Procedure'))}</h3><ol class="recipe-view-steps">${steps || `<li>${esc(tr('No data yet'))}</li>`}</ol></section></div>
     </article>${recipe.id ? `<div class="recipe-view-footer-actions"><details class="recipe-view-download"><summary>${esc(tr('Download'))}${fa('chevron-down', 'recipe-dropdown-icon')}</summary><div><a href="${attr(exportUrl(recipe.id, 'json'))}">JSON-LD</a><a href="${attr(exportUrl(recipe.id, 'markdown'))}">Markdown</a><a href="${attr(exportUrl(recipe.id, 'html'))}">HTML</a></div></details><details class="recipe-view-actions-menu"><summary>${esc(tr('Actions'))}${fa('chevron-down', 'recipe-dropdown-icon')}</summary><div><button data-share-recipe type="button">${fa('share-nodes')}<span>${esc(tr('Share'))}</span></button>${recipe.excludeFromPlanner ? '' : `<button data-add-to-today type="button">${fa('calendar-plus')}<span>${esc(tr('Add to today\'s plan'))}</span></button>`}<button data-add-to-shopping type="button">${fa('cart-plus')}<span>${esc(tr('Add to shopping list'))}</span></button><button data-refine-recipe type="button">${fa('wand-magic-sparkles')}<span>${esc(tr('Optimize organization with AI'))}</span></button><a href="#/recipes/${recipe.id}/edit">${fa('pen-to-square')}<span>${esc(tr('Edit recipe'))}</span></a></div></details></div>` : ''}</div>`;
@@ -966,8 +1001,22 @@ function chooseShoppingList(recipe, lists, initialServings = recipe.servings) {
     });
 }
 async function renderRecipe(view, id) {
-    const recipe = (await working(() => request(`/recipes/${id}`))).recipe;
-    view.innerHTML = recipeViewer(recipe);
+    const original = (await working(() => request(`/recipes/${id}`))).recipe;
+    const translationKey = `${original.id}:${original.revision ?? original.updatedAt}:${defaultLanguage()}`;
+    const translated = showingTranslation.has(original.id) && translatedRecipes.has(translationKey);
+    const recipe = translated ? applyTranslation(original, translatedRecipes.get(translationKey)) : original;
+    view.innerHTML = recipeViewer(recipe, { canTranslate: aiTranslateAvailable, translated });
+    view.querySelector('[data-translate-recipe]')?.addEventListener('click', async () => {
+        if (translated) {
+            showingTranslation.delete(original.id);
+        }
+        else {
+            if (!translatedRecipes.has(translationKey))
+                translatedRecipes.set(translationKey, await translateTexts(original));
+            showingTranslation.add(original.id);
+        }
+        await renderRecipe(view, id);
+    });
     const baseServings = Math.max(1, asNumber(recipe.servings, 1));
     let selectedServings = baseServings;
     view.querySelectorAll('[data-recipe-servings-step]').forEach(button => button.addEventListener('click', () => {
@@ -978,8 +1027,8 @@ async function renderRecipe(view, id) {
             view.querySelector('.recipe-view-ingredients').innerHTML = recipeIngredientItems(recipe, selectedServings / baseServings);
     }));
     view.querySelector('[data-find-cover]')?.addEventListener('click', async () => {
-        const response = await working(() => request(`/recipes/${recipe.id}/cover/search`, { method: 'POST', json: { query: recipe.title, page: 1 } }));
-        const candidate = await chooseCoverCandidate(recipe.id, recipe.title, response.candidates);
+        const response = await working(() => request(`/recipes/${recipe.id}/cover/search`, { method: 'POST', json: { query: original.title, page: 1 } }));
+        const candidate = await chooseCoverCandidate(recipe.id, original.title, response.candidates);
         if (!candidate)
             return;
         await working(() => request(`/recipes/${recipe.id}/cover`, { method: 'POST', json: { url: candidate.url, downloadUrl: candidate.downloadUrl || '' } }));
@@ -1211,7 +1260,7 @@ function editorForm(recipe, taxonomy = {}, step = 1) {
     const advanced = `<section class="form-section"><div class="section-heading"><div><p class="eyebrow">${esc(tr('Advanced'))}</p><h2>${esc(tr('Advanced'))}</h2></div></div></section>`;
     const stepContent = [identity, ingredients, procedure, organization, advanced][step - 1];
 	const stepAddition = step === 2 ? `<div class="wizard-add-action"><button class="secondary" data-add-ingredient type="button">+ ${esc(tr('Ingredient'))}</button></div>` : step === 3 ? `<div class="wizard-add-action"><button class="secondary" data-add-step type="button">+ ${esc(tr('Step'))}</button></div>` : '';
-	return `<section class="editor-top wizard-header"><div><p class="eyebrow">${esc(recipe.id ? tr('Recipe details') : tr('Create manually'))}</p><h2>${esc(recipe.title || tr('Untitled recipe'))}</h2></div></section>${navigation}<div class="editor-layout recipe-wizard-layout"><main class="view-stack"><div class="panel">${stepContent}${step === 5 ? `<div class="advanced-panels">
+	return `<section class="editor-top wizard-header"><div><p class="eyebrow">${esc(recipe.id ? tr('Recipe details') : tr('Create manually'))}</p><h2>${esc(recipe.title || tr('Untitled recipe'))}</h2></div>${aiTranslateAvailable ? `<button class="secondary" data-translate-editor type="button">${fa('language')} ${esc(tr('Translate recipe'))}</button>` : ''}</section>${navigation}<div class="editor-layout recipe-wizard-layout"><main class="view-stack"><div class="panel">${stepContent}${step === 5 ? `<div class="advanced-panels">
 			${recipe.id ? `
 			<section class="panel form-section" data-media-section><p class="eyebrow">${esc(tr('Files'))}</p><h2>${esc(tr('Attachments'))}</h2>${externalCover ? `<div class="media-upload-group cover-upload"><strong>${esc(tr('Cover image'))}</strong><small>${esc(tr('The current cover is hosted externally. Save it locally to make it reliable and available in attachments.'))}</small><div class="button-row"><button class="secondary" data-store-current-cover type="button">${esc(tr('Save cover locally'))}</button><button class="danger secondary" data-remove-cover type="button">${esc(tr('Remove cover'))}</button></div></div>` : ''}<div class="media-upload-group cover-upload"><label><strong>${esc(tr('Cover image'))}</strong><input data-cover-file type="file" accept="image/*"></label><small>${esc(tr('The uploaded image becomes the recipe cover after saving.'))}</small></div><div class="media-upload-group"><label><strong>${esc(tr('Additional attachment'))}</strong><input data-media-file type="file"></label><button class="secondary" data-upload-media type="button">${esc(tr('Upload attachment'))}</button></div><ul class="media-list">${recipe.media.map(item => item.id ? `<li><a href="${attr(mediaUrl(item.id))}" target="_blank" rel="noopener"><strong>${esc(item.altText || item.path.split('/').pop() || item.kind)}</strong><small>${esc(item.mime || item.kind)} · ${formatBytes(item.fileSize)} · ${formatMediaDate(item.createdAt)}</small></a><button class="icon-button danger" data-delete-media="${attr(item.id)}" type="button" aria-label="${attr(tr('Delete'))}">${fa('xmark')}</button></li>` : '').join('')}</ul></section>
 			<section class="panel form-section" data-sharing-section><p class="eyebrow">${esc(tr('Access'))}</p><h2>${esc(tr('Sharing'))}</h2><div data-share-list></div><div class="share-form"><select data-share-type><option value="link">${esc(tr('Public link'))}</option><option value="user">${esc(tr('User'))}</option><option value="group">${esc(tr('Group'))}</option></select><input data-share-with name="smartcook-share-with" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" aria-label="${attr(tr('User or group ID'))}" placeholder="${attr(tr('User or group ID'))}"><input data-share-password name="smartcook-link-password" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" aria-label="${attr(tr('Optional link password'))}" placeholder="${attr(tr('Optional link password'))}"><label class="check-inline"><input data-share-edit type="checkbox"> ${esc(tr('Allow editing'))}</label><button class="secondary" data-create-share type="button">${esc(tr('Create share'))}</button></div></section>
@@ -1240,6 +1289,12 @@ async function renderEditor(view, id) {
 		view.querySelectorAll('[data-wizard-step]').forEach(button => button.addEventListener('click', () => changeStep(asNumber(button.dataset.wizardStep))));
 		view.querySelector('[data-wizard-back]')?.addEventListener('click', () => changeStep(Math.max(1, wizardStep - 1)));
 		view.querySelector('[data-wizard-next]')?.addEventListener('click', () => changeStep(Math.min(5, wizardStep + 1)));
+        view.querySelector('[data-translate-editor]')?.addEventListener('click', async () => {
+            recipe = collectRecipe(view, recipe);
+            recipe = applyTranslation(recipe, await translateTexts(recipe));
+            await paint();
+            showNotice(tr('Recipe translated. Review it before saving.'));
+        });
         view.querySelector('[data-add-ingredient]')?.addEventListener('click', () => {
             const holder = view.querySelector('[data-ingredients]');
             holder.insertAdjacentHTML('beforeend', ingredientRow());
@@ -1587,7 +1642,31 @@ async function renderImport(view) {
             bindImportSave(view.querySelector('[data-import-preview]'));
         loadInbox();
     };
+    // Copies what is typed into the preview cards back into the previews.
+    const syncPreviewsFromDom = (holder, sharedTags = []) => {
+        holder.querySelectorAll('[data-import-preview-card]').forEach((card, index) => {
+            const preview = previews[index];
+            preview.recipe.title = card.querySelector('[data-preview-title]')?.value.trim() || preview.recipe.title;
+            preview.recipe.description = card.querySelector('[data-preview-description]')?.value.trim() || preview.recipe.description;
+            preview.recipe.cuisine = card.querySelector('[data-preview-cuisine]')?.value.trim() || null;
+            preview.recipe.mealType = card.querySelector('[data-preview-meal-type]')?.value.trim() || null;
+            preview.recipe.cookingMethod = card.querySelector('[data-preview-cooking-method]')?.value.trim() || null;
+            preview.recipe.tags = [...new Set([...previewNames(card.querySelector('[data-preview-tags]')?.value), ...sharedTags])];
+            preview.recipe.categories = previewNames(card.querySelector('[data-preview-categories]')?.value);
+            preview.recipe.ingredients = previewIngredients(card.querySelector('[data-preview-ingredients]')?.value);
+            preview.recipe.steps = previewSteps(card.querySelector('[data-preview-steps]')?.value);
+        });
+    };
     const bindImportSave = (holder) => {
+		holder.querySelectorAll('[data-translate-preview]').forEach(button => button.addEventListener('click', async () => {
+			const index = Number(button.dataset.translatePreview);
+			syncPreviewsFromDom(holder);
+			previews[index].recipe = applyTranslation(previews[index].recipe, await translateTexts(previews[index].recipe));
+			holder.innerHTML = importPreviewsHtml(previews, savedPreviews, commonImportTag, taxonomy);
+			bindImportSave(holder);
+			holder.querySelectorAll('[data-import-preview-card]')[index]?.setAttribute('open', '');
+			showNotice(tr('Recipe translated. Review it before saving.'));
+		}));
 		holder.querySelector('[data-import-common-tag]')?.addEventListener('input', event => {
 			commonImportTag = event.currentTarget.value;
 		});
@@ -1608,18 +1687,7 @@ async function renderImport(view) {
                 return;
             }
             const sharedTags = commonImportTag.split(',').map(tag => tag.trim()).filter(Boolean);
-            holder.querySelectorAll('[data-import-preview-card]').forEach((card, index) => {
-                const preview = previews[index];
-                preview.recipe.title = card.querySelector('[data-preview-title]')?.value.trim() || preview.recipe.title;
-                preview.recipe.description = card.querySelector('[data-preview-description]')?.value.trim() || preview.recipe.description;
-				preview.recipe.cuisine = card.querySelector('[data-preview-cuisine]')?.value.trim() || null;
-				preview.recipe.mealType = card.querySelector('[data-preview-meal-type]')?.value.trim() || null;
-				preview.recipe.cookingMethod = card.querySelector('[data-preview-cooking-method]')?.value.trim() || null;
-				preview.recipe.tags = [...new Set([...previewNames(card.querySelector('[data-preview-tags]')?.value), ...sharedTags])];
-				preview.recipe.categories = previewNames(card.querySelector('[data-preview-categories]')?.value);
-				preview.recipe.ingredients = previewIngredients(card.querySelector('[data-preview-ingredients]')?.value);
-				preview.recipe.steps = previewSteps(card.querySelector('[data-preview-steps]')?.value);
-            });
+            syncPreviewsFromDom(holder, sharedTags);
             button.disabled = true;
             const failedRecipes = [];
             const failedCovers = [];
@@ -1725,6 +1793,7 @@ function importPreviewHtml(preview, saved = false, index = 0) {
     return `<details class="import-preview-card" data-import-preview-card ${index === 0 ? 'open' : ''}><summary><div><p class="eyebrow">${index + 1}. ${esc(preview.strategy)}</p><h3>${esc(recipe.title || tr('Import preview'))}</h3></div>${saved ? `<span class="status-pill enabled">${esc(tr('Saved'))}</span>` : `<span class="import-preview-summary">${esc(trn('%n ingredient', '%n ingredients', recipe.ingredients.length))} · ${esc(trn('%n step', '%n steps', recipe.steps.length))}</span>`}</summary><div class="import-preview-body">
 		${preview.warnings.length ? `<div class="warning-list">${preview.warnings.map(warning => `<p>${esc(localizeApiMessage(warning))}</p>`).join('')}</div>` : ''}
 		${coverImage ? `<img class="import-cover-preview" src="${attr(coverImage)}" alt="">` : ''}
+		${aiTranslateAvailable && !saved ? `<div class="import-preview-tools"><button class="secondary" data-translate-preview="${index}" type="button">${fa('language')} ${esc(tr('Translate recipe'))}</button></div>` : ''}
 		<label>${esc(tr('Title'))}<input data-preview-title value="${attr(recipe.title)}"></label><label>${esc(tr('Description'))}<textarea data-preview-description rows="3">${esc(recipe.description)}</textarea></label>
 		<div class="form-grid import-preview-fields"><label>${esc(tr('Tags'))}<input data-preview-tags value="${attr(tags.join(', '))}" list="smartcook-import-tags" autocomplete="new-password"></label><label>${esc(tr('Categories'))}<input data-preview-categories value="${attr(categories.join(', '))}" list="smartcook-import-categories" autocomplete="new-password"></label><label>${esc(tr('Cuisine'))}<input data-preview-cuisine value="${attr(recipe.cuisine)}" list="smartcook-import-cuisine"></label><label>${esc(tr('Meal type'))}<input data-preview-meal-type value="${attr(recipe.mealType)}" list="smartcook-import-meal-type"></label><label class="span-2">${esc(tr('Cooking method'))}<input data-preview-cooking-method value="${attr(recipe.cookingMethod)}" list="smartcook-import-cooking-method"></label></div>
 		<div class="preview-metrics"><span>${esc(trn('%n serving', '%n servings', recipe.servings))}</span><span>${recipe.prepTime} ${esc(tr('min'))} ${esc(tr('prep'))}</span><span>${recipe.cookTime} ${esc(tr('min'))} ${esc(tr('cook'))}</span><span>${recipe.totalTime} ${esc(tr('min'))} ${esc(tr('total'))}</span></div>
@@ -2330,6 +2399,7 @@ async function renderSettings(view) {
         payload.clearUnsplashAccessKey = view.querySelector('[data-setting-clear="unsplashAccessKey"]')?.checked || false;
         await working(() => request('/settings', { method: 'PUT', json: { settings: payload } }));
         languageSetting = String(payload.language ?? languageSetting);
+        aiTranslateAvailable = !!payload.aiProvider && payload.aiProvider !== 'disabled';
         showNotice(tr('Settings saved'));
         await renderSettings(view);
     });

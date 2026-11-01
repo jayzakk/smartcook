@@ -8,6 +8,7 @@ use OCA\SmartCook\Service\CoverImageSearchService;
 use OCA\SmartCook\Service\DuplicateService;
 use OCA\SmartCook\Service\RecipeService;
 use OCA\SmartCook\Service\AI\RecipeRefinementService;
+use OCA\SmartCook\Service\AI\RecipeTranslationService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -18,7 +19,7 @@ use OCP\IRequest;
 use Psr\Log\LoggerInterface;
 
 final class RecipeController extends BaseController {
-    public function __construct(IRequest $request, LoggerInterface $logger, private RecipeService $recipes, private DuplicateService $duplicates, private CoverImageSearchService $coverImages, private RecipeRefinementService $refinement) {
+    public function __construct(IRequest $request, LoggerInterface $logger, private RecipeService $recipes, private DuplicateService $duplicates, private CoverImageSearchService $coverImages, private RecipeRefinementService $refinement, private RecipeTranslationService $translation) {
         parent::__construct($request, $logger);
     }
 
@@ -170,6 +171,16 @@ final class RecipeController extends BaseController {
             $merged = $this->duplicates->merge($this->recipes->get($id), $incoming);
             return ['recipe' => $this->recipes->update($id, $merged)];
         });
+    }
+
+    #[NoAdminRequired]
+    #[FrontpageRoute(verb: 'POST', url: '/recipes/translate')]
+    public function translate(): JSONResponse {
+        $recipe = $this->request->getParam('recipe', []);
+        return $this->respond(fn (): array => ['translation' => $this->translation->translate(
+            is_array($recipe) ? $recipe : [],
+            (string)$this->request->getParam('language', ''),
+        )]);
     }
 
     #[NoAdminRequired]
