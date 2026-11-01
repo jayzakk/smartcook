@@ -1720,7 +1720,7 @@ function importPreviewHtml(preview, saved = false, index = 0) {
 		[tr('Calories'), asNumber(recipe.calories) > 0 ? `${asNumber(recipe.calories)} kcal` : ''],
 		[tr('Tags'), tags.map(tag => `#${tag}`).join(' · ')],
 	].filter(([, value]) => String(value || '').trim() !== '');
-    const ingredientText = (recipe.ingredients || []).map(item => [item.quantity ?? '', item.unit || '', item.name || '', item.notes || ''].join(' | ')).join('\n');
+    const ingredientText = (recipe.ingredients || []).map(item => [item.quantity ?? '', displayUnit(item.unit), item.name || '', item.notes || ''].join(' | ')).join('\n');
 	const stepText = (recipe.steps || []).map(step => step.text || '').join('\n');
     return `<details class="import-preview-card" data-import-preview-card ${index === 0 ? 'open' : ''}><summary><div><p class="eyebrow">${index + 1}. ${esc(preview.strategy)}</p><h3>${esc(recipe.title || tr('Import preview'))}</h3></div>${saved ? `<span class="status-pill enabled">${esc(tr('Saved'))}</span>` : `<span class="import-preview-summary">${esc(trn('%n ingredient', '%n ingredients', recipe.ingredients.length))} · ${esc(trn('%n step', '%n steps', recipe.steps.length))}</span>`}</summary><div class="import-preview-body">
 		${preview.warnings.length ? `<div class="warning-list">${preview.warnings.map(warning => `<p>${esc(localizeApiMessage(warning))}</p>`).join('')}</div>` : ''}

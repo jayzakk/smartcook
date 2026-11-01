@@ -34,6 +34,7 @@ final class TextNormalizer {
         'spicchio' => 'clove', 'spicchi' => 'clove', 'clove' => 'clove', 'cloves' => 'clove',
         'pizzico' => 'pinch', 'pizzichi' => 'pinch', 'pinch' => 'pinch',
         'q.b.' => 'to_taste', 'qb' => 'to_taste', 'quanto basta' => 'to_taste', 'to taste' => 'to_taste',
+        'q b' => 'to_taste', 'nach geschmack' => 'to_taste', 'au gout' => 'to_taste',
         // German; keys are lower case with umlauts written out (see normalizeUnit). Units without a canonical
         // code are stored in their singular form, as written in the recipe.
         'gramm' => 'g', 'kilo' => 'kg', 'kilogramm' => 'kg', 'milliliter' => 'ml', 'liter' => 'l',

@@ -89,6 +89,14 @@ foreach ([
     $expectSame([$unit, $name, $notes], [$german['unit'], $german['name'], $german['notes']], 'German ingredient: ' . $line);
 }
 
+// The unit labels shown in the UI must be read back as the canonical unit codes (every language of the catalog).
+foreach (['en', 'it', 'fr', 'de'] as $lang) {
+    $labels = json_decode((string)file_get_contents(__DIR__ . '/../l10n/' . $lang . '.json'), true)['translations'];
+    foreach (['tsp', 'tbsp', 'cup', 'pc', 'clove', 'pinch', 'to_taste'] as $code) {
+        $expectSame($code, $text->normalizeUnit($labels[$code] ?? $code), 'Unit label round trip: ' . $lang . ' ' . $code);
+    }
+}
+
 $recipeText = <<<'TEXT'
 Lasagne al forno
 Una ricetta classica italiana, ricca e adatta al pranzo della domenica.
