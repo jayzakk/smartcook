@@ -34,6 +34,22 @@ final class TextNormalizer {
         'spicchio' => 'clove', 'spicchi' => 'clove', 'clove' => 'clove', 'cloves' => 'clove',
         'pizzico' => 'pinch', 'pizzichi' => 'pinch', 'pinch' => 'pinch',
         'q.b.' => 'to_taste', 'qb' => 'to_taste', 'quanto basta' => 'to_taste', 'to taste' => 'to_taste',
+        // German; keys are lower case with umlauts written out (see normalizeUnit). Units without a canonical
+        // code are stored in their singular form, as written in the recipe.
+        'gramm' => 'g', 'kilo' => 'kg', 'kilogramm' => 'kg', 'milliliter' => 'ml', 'liter' => 'l',
+        'tl' => 'tsp', 'teeloeffel' => 'tsp', 'el' => 'tbsp', 'essloeffel' => 'tbsp',
+        'tasse' => 'cup', 'tassen' => 'cup',
+        'stueck' => 'pc', 'stk' => 'pc', 'zehe' => 'clove', 'zehen' => 'clove',
+        'prise' => 'pinch', 'prisen' => 'pinch',
+        'scheiben' => 'Scheibe', 'scheibe' => 'Scheibe', 'dosen' => 'Dose', 'dose' => 'Dose',
+        'koepfe' => 'Kopf', 'kopf' => 'Kopf', 'bund' => 'Bund', 'buende' => 'Bund',
+        'paeckchen' => 'Päckchen', 'pck' => 'Päckchen', 'packung' => 'Packung', 'packungen' => 'Packung', 'pkg' => 'Packung',
+        'glaeser' => 'Glas', 'glas' => 'Glas', 'flaschen' => 'Flasche', 'flasche' => 'Flasche',
+        'zweige' => 'Zweig', 'zweig' => 'Zweig', 'stangen' => 'Stange', 'stange' => 'Stange',
+        'stiele' => 'Stiel', 'stiel' => 'Stiel', 'blaetter' => 'Blatt', 'blatt' => 'Blatt',
+        'knollen' => 'Knolle', 'knolle' => 'Knolle', 'becher' => 'Becher', 'beutel' => 'Beutel',
+        'wuerfel' => 'Würfel', 'msp' => 'Msp.', 'messerspitze' => 'Msp.', 'messerspitzen' => 'Msp.',
+        'handvoll' => 'Handvoll', 'schuss' => 'Schuss', 'spritzer' => 'Spritzer', 'tropfen' => 'Tropfen',
     ];
 
     public function normalizeName(string $value): string {
@@ -62,7 +78,8 @@ final class TextNormalizer {
         if ($unit === null || trim($unit) === '') {
             return null;
         }
-        $normalized = $this->normalizeName($unit);
+        // Write umlauts out first: transliteration to ASCII depends on the server locale.
+        $normalized = $this->normalizeName(strtr(mb_strtolower(trim($unit)), ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']));
         return self::UNIT_ALIASES[$normalized] ?? trim($unit);
     }
 

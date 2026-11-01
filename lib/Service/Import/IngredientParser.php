@@ -13,7 +13,15 @@ final class IngredientParser {
         'tsp', 'teaspoon', 'teaspoons', 'cucchiaino', 'cucchiaini', 'pz', 'pc', 'piece', 'pieces', 'pezzo', 'pezzi',
         'clove', 'cloves', 'spicchio', 'spicchi', 'pinch', 'pizzico', 'pizzichi', 'bunch', 'mazzo', 'mazzetto',
         'slice', 'slices', 'fetta', 'fette', 'can', 'cans', 'lattina', 'lattine', 'package', 'confezione',
+        // German
+        'gramm', 'kilo', 'kilogramm', 'milliliter', 'liter', 'tl', 'el', 'teelöffel', 'esslöffel', 'tasse', 'tassen',
+        'stück', 'stk', 'zehe', 'zehen', 'prise', 'prisen', 'scheibe', 'scheiben', 'dose', 'dosen', 'kopf', 'köpfe',
+        'bund', 'bünde', 'päckchen', 'pck', 'packung', 'packungen', 'pkg', 'glas', 'gläser', 'flasche', 'flaschen',
+        'zweig', 'zweige', 'stange', 'stangen', 'stiel', 'stiele', 'blatt', 'blätter', 'knolle', 'knollen', 'becher',
+        'beutel', 'würfel', 'msp', 'messerspitze', 'messerspitzen', 'handvoll', 'schuss', 'spritzer', 'tropfen',
     ];
+    /** Optional plural written behind a unit or name: "Scheibe/n", "Dose(n)", "Ei(er)". */
+    private const PLURAL_MARKER = '(?:\\/\\p{L}{1,3}|\\(\\p{L}{1,3}\\))';
 
     public function __construct(private TextNormalizer $normalizer) {
     }
@@ -36,14 +44,14 @@ final class IngredientParser {
         $unit = null;
         $name = $line;
 
-        if (preg_match('/^(' . $quantityPattern . ')\s*(?:x\s*)?(?:(' . $unitPattern . ')\.?\b)?\s*(?:di\s+|of\s+)?(.+)$/iu', $line, $m) === 1) {
+        if (preg_match('/^(' . $quantityPattern . ')\s*(?:x\s*)?(?:(' . $unitPattern . ')' . self::PLURAL_MARKER . '?\.?(?![\p{L}\p{N}]))?\s*(?:di\s+|of\s+)?(.+)$/iu', $line, $m) === 1) {
             $quantity = trim($m[1]);
             $unit = isset($m[2]) && $m[2] !== '' ? $this->normalizer->normalizeUnit($m[2]) : null;
             $name = trim($m[3]);
-        } elseif (preg_match('/^(' . $unitPattern . ')\.?\s+(?:di\s+|of\s+)?(.+)$/iu', $line, $m) === 1) {
+        } elseif (preg_match('/^(' . $unitPattern . ')' . self::PLURAL_MARKER . '?\.?\s+(?:di\s+|of\s+)?(.+)$/iu', $line, $m) === 1) {
             $unit = $this->normalizer->normalizeUnit($m[1]);
             $name = trim($m[2]);
-        } elseif (preg_match('/^(.+?)\s+(' . $quantityPattern . ')\s+(' . $unitPattern . ')\.?\b(?:\s+(.+))?$/iu', $line, $m) === 1) {
+        } elseif (preg_match('/^(.+?)\s+(' . $quantityPattern . ')\s+(' . $unitPattern . ')' . self::PLURAL_MARKER . '?\.?(?![\p{L}\p{N}])(?:\s+(.+))?$/iu', $line, $m) === 1) {
             $name = trim($m[1]);
             $quantity = trim($m[2]);
             $unit = $this->normalizer->normalizeUnit($m[3]);
@@ -51,6 +59,8 @@ final class IngredientParser {
         }
 
         $notes ??= null;
+        // "Zitrone(n)", "Ei(er)": the bracket only spells out the plural, it is not a note.
+        $name = preg_replace('/(?<=\p{L})\(\p{L}{1,3}\)(?=\s|,|;|$)/u', '', $name) ?? $name;
         if ($notes === null && preg_match('/^(.+?)\s*\(([^)]+)\)\s*$/u', $name, $m) === 1) {
             $name = trim($m[1]);
             $notes = trim($m[2]);
@@ -60,6 +70,11 @@ final class IngredientParser {
         }
         $name = preg_replace('/\b(optional|facoltativ[oaie])\b/iu', '', $name) ?? $name;
         $name = trim($name, " \t\n\r\0\x0B,;-");
+        // German "Knoblauchzehe(n)": the clove is the unit, the rest is the ingredient.
+        if ($unit === null && preg_match('/^(\p{L}{3,}?)zehen?$/iu', $name, $m) === 1) {
+            $unit = 'clove';
+            $name = $m[1];
+        }
 
         return $this->build($name, $quantity, $this->normalizer->parseQuantity($quantity), $unit, $notes, $optional, $group, $original, $sortOrder);
     }

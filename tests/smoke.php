@@ -68,6 +68,21 @@ $expectSame('cup', $ingredient['unit'], 'Ingredient unit normalization');
 $expectNear(2.5, $ingredient['amount'], 0.0001, 'Ingredient amount');
 $expectSame('setacciata', $ingredient['notes'], 'Ingredient notes');
 
+foreach ([
+    ['1 Kopf Römersalat(e)', 'Kopf', 'Römersalat', null],
+    ['3 Scheibe/n Toastbrot', 'Scheibe', 'Toastbrot', null],
+    ['2 TL Dijonsenf', 'tsp', 'Dijonsenf', null],
+    ['2 EL Olivenöl', 'tbsp', 'Olivenöl', null],
+    ['1 Prise Salz', 'pinch', 'Salz', null],
+    ['3 Knoblauchzehe(n), in Stücke geschnitten', 'clove', 'Knoblauch', 'in Stücke geschnitten'],
+    ['1 Ei(er), roh', null, 'Ei', 'roh'],
+    ['4 Sardellenfilet(s), aus dem Glas', null, 'Sardellenfilet', 'aus dem Glas'],
+    ['1 Kopfsalat', null, 'Kopfsalat', null],
+] as [$line, $unit, $name, $notes]) {
+    $german = $ingredientParser->parse($line);
+    $expectSame([$unit, $name, $notes], [$german['unit'], $german['name'], $german['notes']], 'German ingredient: ' . $line);
+}
+
 $recipeText = <<<'TEXT'
 Lasagne al forno
 Una ricetta classica italiana, ricca e adatta al pranzo della domenica.
