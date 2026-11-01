@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace OCA\SmartCook\Service\AI;
 
 use OCA\SmartCook\Exception\ImportException;
-use OCP\Http\Client\IClientService;
 
 final class OpenAiCompatibleProvider implements AiProviderInterface {
     private const PROVIDERS = ['openai', 'openrouter', 'ollama', 'localai', 'mistral', 'custom'];
 
     public function __construct(
-        private IClientService $clients,
+        private AiHttpClient $http,
         private AiPromptFactory $prompts,
         private AiJsonParser $json,
         private HttpResponseDecoder $responses,
@@ -76,11 +75,11 @@ final class OpenAiCompatibleProvider implements AiProviderInterface {
         if (!$nativeOllama && in_array($provider, ['openai', 'openrouter', 'mistral'], true)) {
             $payload['response_format'] = ['type' => 'json_object'];
         }
-        $response = $this->clients->newClient()->post($nativeOllama ? $endpoint : $endpoint . '/chat/completions', [
+        $response = $this->http->post($nativeOllama ? $endpoint : $endpoint . '/chat/completions', [
             'headers' => $headers,
             'body' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
             'timeout' => (int)($config['timeout'] ?? 90),
-        ]);
+        ], $provider);
         $body = $this->responses->json($response, 'The AI endpoint');
         $content = $nativeOllama
             ? ($body['response'] ?? null)
