@@ -1001,6 +1001,7 @@ select:focus {
 	top: calc(100% + 4px);
 	inline-size: 100%;
 	max-block-size: 240px;
+	overflow-x: hidden;
 	overflow-y: auto;
 	padding: 4px;
 	border: 1px solid var(--smartcook-border);
@@ -1011,6 +1012,7 @@ select:focus {
 
 .recipe-search-options button {
 	display: block;
+	box-sizing: border-box;
 	inline-size: 100%;
 	min-height: 36px;
 	padding: 7px 9px;
@@ -1019,6 +1021,17 @@ select:focus {
 	background: transparent;
 	color: inherit;
 	text-align: start;
+}
+
+/* "display: block" above would otherwise win over the hidden attribute and the filter would hide nothing. */
+.recipe-search-options [hidden] {
+	display: none;
+}
+
+/* Near the bottom of the screen (the planner form is the last thing on the page) the list opens upwards. */
+.recipe-search-picker.drop-up .recipe-search-options {
+	top: auto;
+	bottom: calc(100% + 4px);
 }
 
 .recipe-search-options button:hover,

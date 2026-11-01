@@ -1,7 +1,7 @@
 # SmartCook – integration branch
 
 Fork build of [gabryk91/smartcook](https://github.com/gabryk91/smartcook): upstream `main` + all open PRs + our own patches.
-Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.196**. Current: **1.0.196-15**.
+Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.196**. Current: **1.0.196-19**.
 
 ## Patches in this branch
 
@@ -31,6 +31,8 @@ Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.
 | Household – `household` | 1.0.196-11 (limit: -12, several groups: -13) | everybody picks one or several of their own Nextcloud groups as household (SmartCook settings); members of the same household see and edit each other's recipes, planner and shopping lists; entries stay owned by their creator (leaving or switching hides them again); AI/cover settings stay personal; taxonomy lists merged by name; admin form (Additional settings) limits the selectable groups (empty = all), a choice that is no longer allowed hides the shared data but is kept |
 | Translate recipe – `recipe-translate` | 1.0.196-14 | AI button (only shown when an AI provider is configured) translates the recipe into the user's language: toggle on the overview (view only, cached), button in the editor and in each import preview (fills the form); `POST /recipes/translate`, `AiPromptFactory::forRequest()` replaces the duplicated prompt selection of the four providers |
 | AI JSON robustness – `ai-json-diagnostics` | 1.0.196-15 | raw control characters inside AI JSON strings are accepted, one retry when the answer is still not valid JSON, the shape of a failed answer is logged (no recipe content beyond start/end) |
+| Planner "+" feedback – `planner-add-feedback` | 1.0.196-17 | the "+" of a day scrolls to the "Add a meal" form, focuses the recipe list and says which day it is for (before it only set a date field further down, so nothing seemed to happen) |
+| Recipe picker filter – `recipe-picker-filter` | 1.0.196-19 | typing in the planner's recipe search hides non-matching recipes (`display: block` overrode the `hidden` attribute, so the filter had no visible effect); the list opens upwards near the bottom of the screen |
 
 ## Maintaining this list
 

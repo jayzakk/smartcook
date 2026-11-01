@@ -1837,6 +1837,8 @@ function bindRecipeSearchPicker(view) {
 		search.setAttribute('aria-expanded', 'false');
 	};
 	const open = () => {
+		const rect = search.getBoundingClientRect();
+		picker.classList.toggle('drop-up', window.innerHeight - rect.bottom < 280 && rect.top > 280);
 		options.hidden = false;
 		search.setAttribute('aria-expanded', 'true');
 	};
@@ -1898,8 +1900,16 @@ async function renderPlanner(view) {
 			showNotice(tr('Meal plan generated'));
 			await load();
 		});
-        view.querySelectorAll('[data-select-date]').forEach(button => button.addEventListener('click', () => { const input = view.querySelector('[data-meal-date]'); if (input)
-            input.value = button.dataset.selectDate || ''; }));
+        // The day's "+" fills the date of the "Add a meal" form further down; take the person there, otherwise nothing seems to happen.
+        view.querySelectorAll('[data-select-date]').forEach(button => button.addEventListener('click', () => {
+            const input = view.querySelector('[data-meal-date]');
+            if (input)
+                input.value = button.dataset.selectDate || '';
+            view.querySelector('[data-add-meal]')?.closest('section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            view.querySelector('[data-meal-recipe-search]')?.focus({ preventScroll: true });
+            const day = new Date(`${button.dataset.selectDate}T00:00:00`);
+            showNotice(tr('Choose a recipe for {date}', { date: Number.isNaN(day.getTime()) ? button.dataset.selectDate : day.toLocaleDateString(document.documentElement.lang || undefined, { weekday: 'long', day: 'numeric', month: 'long' }) }));
+        }));
         view.querySelectorAll('[data-delete-meal]').forEach(button => button.addEventListener('click', async () => {
             if (!window.confirm(tr('Delete this meal?')))
                 return;
