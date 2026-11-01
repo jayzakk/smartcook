@@ -1,7 +1,7 @@
 # SmartCook – integration branch
 
 Fork build of [gabryk91/smartcook](https://github.com/gabryk91/smartcook): upstream `main` + all open PRs + our own patches.
-Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.196**. Current: **1.0.196-6**.
+Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.196**. Current: **1.0.196-10**.
 
 ## Patches in this branch
 
@@ -26,6 +26,8 @@ Version = `<upstream>-<patch level>` (`appinfo/info.xml`). Upstream base: **1.0.
 | Default language – `language-setting` | 1.0.196-4 | setting was never used; now default for new recipes, import output, assistant; `auto` = Nextcloud language; datalist autocompletion; validation |
 | OCR default language – `ocr-language-default` | 1.0.196-5 | default from Nextcloud language (`deu+eng`, `fra+eng`, …) instead of `ita+eng`; OCR help lists matching packages |
 | AI provider errors – `ai-http-errors` | 1.0.196-6 | retry on 429/502/503/504 (Retry-After), readable translated errors instead of raw Guzzle message / "unexpected error", API key no longer in logs or messages |
+| Ingredient units de/fr – `ingredient-units` | 1.0.196-7 (fr: -8, labels: -9) | parser knows German and French units (fr: cuillère à soupe/café, pincée, gousse, tranche, boîte, `de`/`d'` after the unit); ingredient text editor shows translated unit labels, all en/it/fr/de labels map back (q.b., nach Geschmack, au goût); German: parser knows German units (TL, EL, Prise, Zehe, Stück, Kopf, Scheibe, Bund, Dose, Päckchen, …) with canonical codes, `/n` and `(n)` plural markers, `Zitrone(n)` / `Ei(er)` no longer become notes, `Knoblauchzehe(n)` → clove + Knoblauch, smoke tests |
+| Empty quantity in import editor – `import-empty-quantity` | 1.0.196-10 | empty quantity cell in the ingredient text editor is no quantity instead of `0` ("0 Öl"); fractions and decimal commas typed there are kept |
 
 ## Maintaining this list
 

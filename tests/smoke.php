@@ -68,6 +68,35 @@ $expectSame('cup', $ingredient['unit'], 'Ingredient unit normalization');
 $expectNear(2.5, $ingredient['amount'], 0.0001, 'Ingredient amount');
 $expectSame('setacciata', $ingredient['notes'], 'Ingredient notes');
 
+foreach ([
+    ['1 Kopf Römersalat(e)', 'Kopf', 'Römersalat', null],
+    ['3 Scheibe/n Toastbrot', 'Scheibe', 'Toastbrot', null],
+    ['2 TL Dijonsenf', 'tsp', 'Dijonsenf', null],
+    ['2 EL Olivenöl', 'tbsp', 'Olivenöl', null],
+    ['1 Prise Salz', 'pinch', 'Salz', null],
+    ['3 Knoblauchzehe(n), in Stücke geschnitten', 'clove', 'Knoblauch', 'in Stücke geschnitten'],
+    ['1 Ei(er), roh', null, 'Ei', 'roh'],
+    ['4 Sardellenfilet(s), aus dem Glas', null, 'Sardellenfilet', 'aus dem Glas'],
+    ['1 Kopfsalat', null, 'Kopfsalat', null],
+    ['2 cuillères à soupe d’huile d’olive', 'tbsp', 'huile d’olive', null],
+    ['1 c. à café de sel', 'tsp', 'sel', null],
+    ['3 gousses d\'ail', 'clove', 'ail', null],
+    ['1 pincée de sel', 'pinch', 'sel', null],
+    ['2 tranches de pain', 'Tranche', 'pain', null],
+    ['3 œufs', null, 'œufs', null],
+] as [$line, $unit, $name, $notes]) {
+    $german = $ingredientParser->parse($line);
+    $expectSame([$unit, $name, $notes], [$german['unit'], $german['name'], $german['notes']], 'German ingredient: ' . $line);
+}
+
+// The unit labels shown in the UI must be read back as the canonical unit codes (every language of the catalog).
+foreach (['en', 'it', 'fr', 'de'] as $lang) {
+    $labels = json_decode((string)file_get_contents(__DIR__ . '/../l10n/' . $lang . '.json'), true)['translations'];
+    foreach (['tsp', 'tbsp', 'cup', 'pc', 'clove', 'pinch', 'to_taste'] as $code) {
+        $expectSame($code, $text->normalizeUnit($labels[$code] ?? $code), 'Unit label round trip: ' . $lang . ' ' . $code);
+    }
+}
+
 $recipeText = <<<'TEXT'
 Lasagne al forno
 Una ricetta classica italiana, ricca e adatta al pranzo della domenica.
